@@ -172,6 +172,9 @@ nav button.active{color:var(--teal);border-bottom-color:var(--teal)}
 <body>
 
 <div id="setupOverlay">
+  <div style="position:absolute;top:14px;right:14px">
+    <button class="lang-btn" onclick="toggleLang()" id="soLangBtn">EN</button>
+  </div>
   <div style="font-size:44px;margin-bottom:14px">🐱</div>
   <h2 id="so-title">貓貓廁所監察站</h2>
   <p id="so-desc">請先到「設定」填寫 Claude API Key<br>及貓貓資料，再啟動監察</p>
@@ -545,6 +548,8 @@ function applyLang() {
     else el.textContent=t(key);
   });
   document.getElementById('langBtn').textContent = lang==='zh'?'EN':'中';
+  const soLangBtn=document.getElementById('soLangBtn');
+  if(soLangBtn)soLangBtn.textContent=lang==='zh'?'EN':'中';
   document.title = '🐱 ' + t('appTitle');
   // Translate select options
   const optMap={notifAllOpt:'notifAll',notifEverythingOpt:'notifEverything',notifAlertsOpt:'notifAlertsOnly',notifDailyOpt:'notifDaily'};
