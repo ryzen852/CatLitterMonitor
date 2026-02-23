@@ -270,6 +270,7 @@ nav button.active{color:var(--teal);border-bottom-color:var(--teal)}
       <label id="notifModeLabel">發送通知時機</label>
       <select id="notifMode">
         <option value="all" id="notifAllOpt">每次如廁都發</option>
+        <option value="everything" id="notifEverythingOpt">所有 Session（包括冇偵測到貓）</option>
         <option value="alerts" id="notifAlertsOpt">只發健康警告</option>
         <option value="daily" id="notifDailyOpt">每日摘要（早上 8 時）</option>
       </select>
@@ -428,6 +429,8 @@ const STRINGS = {
     checkingPresence:'🔍 確認離場中...',catStillPresent:'貓貓仲係度，繼續監察',
     sectionNotifMode:'📬 通知模式',notifModeLabel:'發送通知時機',
     notifAll:'每次如廁都發',notifAlertsOnly:'只發健康警告',notifDaily:'每日摘要（早上 8 時）',
+    notifEverything:'所有 Session（包括冇偵測到貓）',
+    noCatDetected:'冇偵測到貓',
     noEliminationLabel:'異常探訪警告：貓咪停留多少秒但冇排泄（0 = 停用）',
     noEliminationHint:'建議 90 秒。貓入砂盆卻冇尿冇便可能係尿道阻塞等緊急情況',
     noEliminationAlert:'⚠️ 入砂盆但冇排泄',
@@ -508,6 +511,8 @@ const STRINGS = {
     checkingPresence:'🔍 Confirming departure...',catStillPresent:'Cat still present, continuing',
     sectionNotifMode:'📬 Notification Mode',notifModeLabel:'When to send notifications',
     notifAll:'Every visit',notifAlertsOnly:'Health alerts only',notifDaily:'Daily summary (8 AM)',
+    notifEverything:'Everything (including no-cat sessions)',
+    noCatDetected:'No cat detected',
     noEliminationLabel:'No-elimination alert: seconds in box without output (0 = off)',
     noEliminationHint:'Recommended 90s. Cat in box with no output may indicate urinary blockage or obstruction.',
     noEliminationAlert:'⚠️ In box but no elimination',
@@ -542,7 +547,7 @@ function applyLang() {
   document.getElementById('langBtn').textContent = lang==='zh'?'EN':'中';
   document.title = '🐱 ' + t('appTitle');
   // Translate select options
-  const optMap={notifAllOpt:'notifAll',notifAlertsOpt:'notifAlertsOnly',notifDailyOpt:'notifDaily'};
+  const optMap={notifAllOpt:'notifAll',notifEverythingOpt:'notifEverything',notifAlertsOpt:'notifAlertsOnly',notifDailyOpt:'notifDaily'};
   Object.entries(optMap).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key);});
   renderCatCards();
   renderLogFilter();
@@ -885,8 +890,16 @@ async function finalizeSession(){
   if(!sessionApiCalls.length)return;
   const duration=Math.round((Date.now()-sessionStartTime)/1000);
   const result=aggregateSession(sessionApiCalls);
-  if(!result.catPresent)return;
   const s=loadSettings();
+  if(!result.catPresent){
+    // 'everything' mode: notify even when no cat detected
+    if(s.notifMode==='everything'){
+      const time=new Date(sessionStartTime).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
+      const dur=duration<60?duration+t('ds'):Math.round(duration/60)+t('dm');
+      await pushMsg(`👻 ${t('noCatDetected')}\n🕐 ${time} ｜ ⏱ ${dur}`,s);
+    }
+    return;
+  }
   const entry={timestamp:sessionStartTime.toISOString(),endTimestamp:new Date().toISOString(),duration,cat:result.cat,catName:getCatName(result.cat),activity:result.activity,confidence:result.confidence,notes:result.notes,identBasis:result.identBasis,wasteAnalysis:result.wasteAnalysis,alerts:[]};
   entry.alerts=checkHealth(entry,s);
   addLog(entry);await sendNotifications(entry,s,entry.alerts);
@@ -1097,10 +1110,9 @@ function buildMsg(entry,alerts){
 
 async function sendNotifications(entry,s,alerts){
   const mode=s.notifMode||'all';
-  // 'alerts' mode: only send if there are health alerts
   if(mode==='alerts'&&!alerts.length)return;
-  // 'daily' mode: don't send per-visit, handled by daily summary scheduler
   if(mode==='daily')return;
+  // 'all' and 'everything' both send per-visit notifications
   const msg=buildMsg(entry,alerts);
   await pushMsg(msg,s);
 }
