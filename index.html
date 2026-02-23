@@ -540,7 +540,8 @@ function applyLang() {
   const hyphenMap = {
     'so-title':'soTitle', 'so-desc':'soDesc', 'so-go':'soGo', 'so-skip':'soSkip',
     'hdr-title':'hdrTitle',
-    'tab-monitor':'tabMonitor', 'tab-log':'tabLog', 'tab-stats':'tabStats', 'tab-settings':'tabSettings'
+    'tab-monitor':'tabMonitor', 'tab-log':'tabLog', 'tab-stats':'tabStats', 'tab-settings':'tabSettings',
+    'btnStart':'startBtn', 'btnStop':'stopBtn'
   };
   Object.entries(hyphenMap).forEach(([id,key])=>{
     const el=document.getElementById(id);
@@ -567,6 +568,9 @@ function applyLang() {
   Object.entries(optMap).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key);});
   renderCatCards();
   renderLogFilter();
+  renderRecentEvents();
+  renderLog();
+  renderStats();
 }
 
 function toggleLang() {
