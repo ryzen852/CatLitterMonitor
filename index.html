@@ -6,576 +6,172 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>🐱 貓貓廁所監察站</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #080c12;
-    --surface: #0e1520;
-    --surface2: #141e2e;
-    --border: #1e2d42;
-    --teal: #00e5b0;
-    --teal-dim: #00a87e;
-    --teal-glow: rgba(0,229,176,0.15);
-    --amber: #ffb74d;
-    --red: #ff5252;
-    --blue: #4dd0e1;
-    --text: #c8d8e8;
-    --text-dim: #5a7a96;
-    --text-bright: #e8f4ff;
-    --mono: 'Space Mono', monospace;
-    --sans: 'Syne', sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--mono);
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* ── HEADER ── */
-  header {
-    padding: 12px 16px 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-  }
-  header h1 {
-    font-family: var(--sans);
-    font-weight: 800;
-    font-size: 18px;
-    color: var(--text-bright);
-    letter-spacing: -0.5px;
-  }
-  header h1 span { color: var(--teal); }
-  .status-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--text-dim);
-    flex-shrink: 0;
-    margin-left: auto;
-    transition: background 0.3s;
-  }
-  .status-dot.active { background: var(--teal); box-shadow: 0 0 8px var(--teal); animation: pulse 2s infinite; }
-  .status-dot.motion { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse 0.5s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  /* ── TABS ── */
-  nav {
-    display: flex;
-    padding: 10px 16px 0;
-    gap: 4px;
-    flex-shrink: 0;
-    border-bottom: 1px solid var(--border);
-  }
-  nav button {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 8px 12px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  nav button.active { color: var(--teal); border-bottom-color: var(--teal); }
-  nav button:hover:not(.active) { color: var(--text); }
-
-  /* ── PAGES ── */
-  .pages { flex: 1; overflow: hidden; position: relative; }
-  .page { 
-    position: absolute; inset: 0; 
-    overflow-y: auto; 
-    padding: 16px;
-    display: none;
-  }
-  .page.active { display: block; }
-
-  /* ── MONITOR PAGE ── */
-  .camera-wrap {
-    position: relative;
-    background: #000;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 1px solid var(--border);
-    aspect-ratio: 4/3;
-    max-height: 280px;
-  }
-  #videoEl {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  #roiCanvas {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    cursor: crosshair;
-    touch-action: none;
-  }
-  .cam-overlay {
-    position: absolute;
-    top: 8px; left: 8px;
-    background: rgba(8,12,18,0.8);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 8px;
-    font-size: 10px;
-    color: var(--teal);
-    backdrop-filter: blur(4px);
-  }
-  .cam-status {
-    position: absolute;
-    bottom: 8px; right: 8px;
-    background: rgba(8,12,18,0.85);
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 10px;
-    color: var(--text-dim);
-  }
-  .cam-status.in-session { color: var(--amber); border: 1px solid var(--amber); }
-  .cam-status.analyzing { color: var(--blue); border: 1px solid var(--blue); }
-
-  .monitor-controls {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 8px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .btn:hover { border-color: var(--teal); color: var(--teal); }
-  .btn.primary { background: var(--teal); color: #080c12; border-color: var(--teal); font-weight: 700; }
-  .btn.primary:hover { background: var(--teal-dim); }
-  .btn.danger { border-color: var(--red); color: var(--red); }
-  .btn:disabled { opacity: 0.4; cursor: default; }
-  .btn.full { flex: 1; }
-
-  /* ROI hint */
-  .hint {
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-top: 6px;
-    text-align: center;
-  }
-
-  /* motion meter */
-  .motion-meter-wrap {
-    margin-top: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-  }
-  .meter-label {
-    display: flex;
-    justify-content: space-between;
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-  }
-  .meter-bar {
-    height: 6px;
-    background: var(--surface2);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-  .meter-fill {
-    height: 100%;
-    background: var(--teal);
-    border-radius: 3px;
-    transition: width 0.2s;
-    width: 0%;
-  }
-  .meter-fill.hot { background: var(--amber); }
-  .meter-fill.fire { background: var(--red); }
-
-  /* current session card */
-  .session-card {
-    margin-top: 12px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    display: none;
-  }
-  .session-card.visible { display: block; border-color: var(--amber); }
-  .session-title {
-    font-family: var(--sans);
-    font-size: 13px;
-    color: var(--amber);
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
-  .session-info {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    font-size: 11px;
-  }
-  .info-item label { color: var(--text-dim); display: block; font-size: 9px; margin-bottom: 2px; }
-  .info-item span { color: var(--text-bright); }
-
-  /* recent events */
-  .section-title {
-    font-family: var(--sans);
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-bright);
-    margin: 16px 0 8px;
-  }
-  .event-list { display: flex; flex-direction: column; gap: 6px; }
-  .event-item {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .event-cat-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-  .event-body { flex: 1; min-width: 0; }
-  .event-title { font-size: 12px; color: var(--text-bright); }
-  .event-sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
-  .event-time { font-size: 10px; color: var(--text-dim); text-align: right; flex-shrink: 0; }
-  .badge {
-    padding: 2px 7px;
-    border-radius: 4px;
-    font-size: 9px;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  .badge.pee { background: rgba(77,208,225,0.2); color: var(--blue); }
-  .badge.poop { background: rgba(255,183,77,0.2); color: var(--amber); }
-  .badge.visit { background: rgba(0,229,176,0.15); color: var(--teal); }
-  .badge.alert { background: rgba(255,82,82,0.2); color: var(--red); }
-
-  /* ── ANALYTICS PAGE ── */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-  }
-  .stat-card.full-width { grid-column: 1/-1; }
-  .stat-val {
-    font-family: var(--sans);
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--teal);
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-  .stat-label { font-size: 10px; color: var(--text-dim); }
-  .stat-sub { font-size: 11px; color: var(--text); margin-top: 6px; }
-
-  .cat-panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 8px;
-  }
-  .cat-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-  .cat-avatar {
-    width: 32px; height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-  }
-  .cat-name {
-    font-family: var(--sans);
-    font-weight: 700;
-    font-size: 14px;
-    color: var(--text-bright);
-  }
-  .cat-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-  }
-  .mini-stat { text-align: center; }
-  .mini-stat .val { font-size: 18px; font-weight: 700; color: var(--teal); font-family: var(--sans); }
-  .mini-stat .lbl { font-size: 9px; color: var(--text-dim); }
-
-  /* health alerts */
-  .alert-card {
-    background: rgba(255,82,82,0.08);
-    border: 1px solid rgba(255,82,82,0.3);
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 8px;
-  }
-  .alert-card.warn {
-    background: rgba(255,183,77,0.08);
-    border-color: rgba(255,183,77,0.3);
-  }
-  .alert-title { font-size: 12px; color: var(--red); font-weight: 700; margin-bottom: 4px; }
-  .alert-card.warn .alert-title { color: var(--amber); }
-  .alert-body { font-size: 11px; color: var(--text); }
-
-  /* timeline chart */
-  .timeline-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 8px;
-  }
-  .timeline-hours {
-    display: flex;
-    justify-content: space-between;
-    font-size: 9px;
-    color: var(--text-dim);
-    margin-bottom: 8px;
-  }
-  .timeline-row { 
-    display: flex; 
-    align-items: center; 
-    gap: 8px;
-    margin-bottom: 6px;
-  }
-  .timeline-cat-label { font-size: 10px; color: var(--text-dim); width: 50px; flex-shrink: 0; }
-  .timeline-bar {
-    flex: 1;
-    height: 20px;
-    background: var(--surface2);
-    border-radius: 4px;
-    position: relative;
-    overflow: hidden;
-  }
-  .timeline-event {
-    position: absolute;
-    top: 2px; bottom: 2px;
-    border-radius: 3px;
-    min-width: 4px;
-  }
-
-  /* ── LOG PAGE ── */
-  .log-filter {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-  }
-  .filter-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: 10px;
-    padding: 5px 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .filter-btn.active { border-color: var(--teal); color: var(--teal); background: var(--teal-glow); }
-
-  .log-date-group { margin-bottom: 16px; }
-  .log-date-label {
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-  .log-entry {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 10px 12px;
-    margin-bottom: 6px;
-  }
-  .log-entry-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .log-entry-notes { font-size: 10px; color: var(--text-dim); line-height: 1.5; font-style: italic; }
-  .log-entry-meta { display: flex; gap: 12px; margin-top: 6px; font-size: 10px; color: var(--text-dim); }
-  .log-entry-meta span { display: flex; align-items: center; gap: 4px; }
-
-  /* ── SETTINGS PAGE ── */
-  .settings-section {
-    margin-bottom: 20px;
-  }
-  .settings-section-title {
-    font-family: var(--sans);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--teal);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 10px;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--border);
-  }
-  .field {
-    margin-bottom: 12px;
-  }
-  .field label {
-    display: block;
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-  }
-  .field input, .field select, .field textarea {
-    width: 100%;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    color: var(--text-bright);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .field input:focus, .field select:focus, .field textarea:focus {
-    border-color: var(--teal);
-  }
-  .field input[type="range"] {
-    padding: 0;
-    background: none;
-    border: none;
-    cursor: pointer;
-  }
-  .field .field-row { display: flex; gap: 8px; }
-  .field .field-row input { flex: 1; }
-  .field .color-preview {
-    width: 42px; height: 42px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .range-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--text-dim); margin-top: 3px; }
-
-  .test-btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-
-  /* PHOTO UPLOAD */
-  .photo-upload-row { display: flex; gap: 10px; align-items: flex-start; }
-  .photo-preview-wrap {
-    flex-shrink: 0; width: 72px; height: 72px;
-    border-radius: 10px; border: 2px dashed var(--border);
-    background: var(--surface2); display: flex; flex-direction: column;
-    align-items: center; justify-content: center; cursor: pointer;
-    position: relative; overflow: hidden; transition: border-color 0.2s;
-  }
-  .photo-preview-wrap:hover { border-color: var(--teal); }
-  .photo-preview-wrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
-  .photo-preview-wrap .upload-icon { font-size: 20px; }
-  .photo-preview-wrap .upload-label { font-size: 8px; color: var(--text-dim); margin-top: 2px; }
-  .photo-preview-wrap input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; padding: 0; background: none; border: none; }
-  .photo-fields { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-  .photo-fields input, .photo-fields textarea {
-    width: 100%; background: var(--surface); border: 1px solid var(--border);
-    color: var(--text-bright); font-family: var(--mono); font-size: 11px;
-    padding: 8px 10px; border-radius: 8px; outline: none; resize: vertical; transition: border-color 0.2s;
-  }
-  .photo-fields input:focus, .photo-fields textarea:focus { border-color: var(--teal); }
-  .id-tip { font-size: 10px; color: var(--text-dim); background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-top: 6px; line-height: 1.5; }
-  .id-tip strong { color: var(--teal); }
-
-  /* ── EMPTY STATE ── */
-  .empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--text-dim);
-    font-size: 12px;
-  }
-  .empty-icon { font-size: 40px; margin-bottom: 12px; }
-
-  /* ── TOAST ── */
-  #toast {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%) translateY(100px);
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text-bright);
-    font-size: 12px;
-    padding: 10px 20px;
-    border-radius: 20px;
-    transition: transform 0.3s;
-    z-index: 999;
-    white-space: nowrap;
-    max-width: 90vw;
-    text-align: center;
-  }
-  #toast.show { transform: translateX(-50%) translateY(0); }
-  #toast.success { border-color: var(--teal); color: var(--teal); }
-  #toast.error { border-color: var(--red); color: var(--red); }
-
-  /* ── SCROLLBAR ── */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: var(--bg); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  /* ── SETUP OVERLAY ── */
-  #setupOverlay {
-    position: fixed; inset: 0;
-    background: var(--bg);
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 32px 24px;
-    text-align: center;
-  }
-  #setupOverlay.hidden { display: none; }
-  #setupOverlay h2 { font-family: var(--sans); font-size: 24px; font-weight: 800; color: var(--text-bright); margin-bottom: 8px; }
-  #setupOverlay p { font-size: 12px; color: var(--text-dim); margin-bottom: 24px; line-height: 1.6; }
-
-  .no-events { font-size: 11px; color: var(--text-dim); text-align: center; padding: 20px; }
+:root{--bg:#080c12;--surface:#0e1520;--surface2:#141e2e;--border:#1e2d42;--teal:#00e5b0;--teal-dim:#00a87e;--teal-glow:rgba(0,229,176,0.12);--amber:#ffb74d;--red:#ff5252;--blue:#4dd0e1;--text:#c8d8e8;--text-dim:#5a7a96;--text-bright:#e8f4ff;--mono:'Space Mono',monospace;--sans:'Syne',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+header{padding:10px 14px 0;display:flex;align-items:center;gap:8px;flex-shrink:0}
+header h1{font-family:var(--sans);font-weight:800;font-size:17px;color:var(--text-bright);letter-spacing:-.5px;flex:1}
+header h1 span{color:var(--teal)}
+.lang-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text-dim);font-family:var(--mono);font-size:10px;padding:4px 9px;border-radius:6px;cursor:pointer;transition:all .2s}
+.lang-btn:hover{border-color:var(--teal);color:var(--teal)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:background .3s}
+.status-dot.active{background:var(--teal);box-shadow:0 0 8px var(--teal);animation:pulse 2s infinite}
+.status-dot.motion{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:pulse .5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+nav{display:flex;padding:8px 14px 0;gap:3px;flex-shrink:0;border-bottom:1px solid var(--border);overflow-x:auto}
+nav::-webkit-scrollbar{display:none}
+nav button{background:none;border:none;color:var(--text-dim);font-family:var(--mono);font-size:11px;padding:7px 11px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;white-space:nowrap}
+nav button.active{color:var(--teal);border-bottom-color:var(--teal)}
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;padding:14px;display:none}
+.page.active{display:block}
+.camera-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--border);aspect-ratio:4/3;max-height:270px}
+#videoEl{width:100%;height:100%;object-fit:cover;display:block}
+#roiCanvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
+.cam-overlay{position:absolute;top:8px;left:8px;background:rgba(8,12,18,.8);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10px;color:var(--teal);backdrop-filter:blur(4px)}
+.cam-status{position:absolute;bottom:8px;right:8px;background:rgba(8,12,18,.85);border-radius:6px;padding:3px 9px;font-size:10px;color:var(--text-dim)}
+.cam-status.in-session{color:var(--amber);border:1px solid var(--amber)}
+.cam-status.analyzing{color:var(--blue);border:1px solid var(--blue)}
+.btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:8px 13px;border-radius:8px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn:hover{border-color:var(--teal);color:var(--teal)}
+.btn.primary{background:var(--teal);color:#080c12;border-color:var(--teal);font-weight:700}
+.btn.primary:hover{background:var(--teal-dim)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.sm{padding:5px 10px;font-size:10px}
+.btn:disabled{opacity:.4;cursor:default}
+.monitor-controls{display:flex;gap:8px;margin-top:10px}
+.hint{font-size:10px;color:var(--text-dim);margin-top:5px;text-align:center}
+.motion-meter-wrap{margin-top:11px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px}
+.meter-label{display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim);margin-bottom:5px}
+.meter-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.meter-fill{height:100%;background:var(--teal);border-radius:3px;transition:width .2s;width:0%}
+.meter-fill.hot{background:var(--amber)}
+.meter-fill.fire{background:var(--red)}
+.session-card{margin-top:11px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;display:none}
+.session-card.visible{display:block;border-color:var(--amber)}
+.session-title{font-family:var(--sans);font-size:13px;color:var(--amber);font-weight:700;margin-bottom:8px}
+.session-info{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px}
+.info-item label{color:var(--text-dim);display:block;font-size:9px;margin-bottom:2px}
+.section-title{font-family:var(--sans);font-size:13px;font-weight:700;color:var(--text-bright);margin:14px 0 7px}
+.event-list{display:flex;flex-direction:column;gap:6px}
+.event-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 11px;display:flex;align-items:center;gap:9px}
+.cat-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.event-body{flex:1;min-width:0}
+.event-title{font-size:12px;color:var(--text-bright)}
+.event-sub{font-size:10px;color:var(--text-dim);margin-top:2px}
+.event-time{font-size:10px;color:var(--text-dim);flex-shrink:0}
+.badge{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;flex-shrink:0}
+.badge.pee{background:rgba(77,208,225,.2);color:var(--blue)}
+.badge.poop{background:rgba(255,183,77,.2);color:var(--amber)}
+.badge.visit{background:var(--teal-glow);color:var(--teal)}
+.badge.alert{background:rgba(255,82,82,.2);color:var(--red)}
+.no-events{font-size:11px;color:var(--text-dim);text-align:center;padding:20px}
+.settings-section{margin-bottom:20px}
+.settings-section-title{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.field{margin-bottom:10px}
+.field label{display:block;font-size:10px;color:var(--text-dim);margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text-bright);font-family:var(--mono);font-size:12px;padding:9px 11px;border-radius:8px;outline:none;transition:border-color .2s}
+.field select option{background:var(--surface2)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--teal)}
+.field input[type=range]{padding:0;background:none;border:none;cursor:pointer}
+.range-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);margin-top:2px}
+.field-hint{font-size:10px;color:var(--text-dim);margin-top:4px;line-height:1.5;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 9px}
+.test-btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+/* MULTI-CAT */
+.cat-cards{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.cat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;transition:border-color .2s}
+.cat-card.open{border-color:var(--border)}
+.cat-card-header{display:flex;align-items:center;gap:9px;padding:11px 13px;cursor:pointer;user-select:none}
+.cat-name-display{flex:1;font-size:13px;color:var(--text-bright);font-weight:700}
+.cat-breed-display{font-size:10px;color:var(--text-dim)}
+.cat-card-chevron{font-size:11px;color:var(--text-dim);transition:transform .2s;flex-shrink:0}
+.cat-card.open .cat-card-chevron{transform:rotate(180deg)}
+.cat-card-body{padding:0 13px 13px;display:none}
+.cat-card.open .cat-card-body{display:block}
+.photo-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+.photo-thumb{flex-shrink:0;width:62px;height:62px;border-radius:10px;border:2px dashed var(--border);background:var(--surface2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;transition:border-color .2s}
+.photo-thumb:hover{border-color:var(--teal)}
+.photo-thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.photo-thumb .pi{font-size:18px;pointer-events:none}
+.photo-thumb .pl{font-size:8px;color:var(--text-dim);margin-top:1px;pointer-events:none}
+.photo-thumb input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;padding:0;background:none;border:none}
+.cat-fields{flex:1;display:flex;flex-direction:column;gap:6px}
+.cat-fields input,.cat-fields select,.cat-fields textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text-bright);font-family:var(--mono);font-size:11px;padding:7px 10px;border-radius:8px;outline:none;resize:vertical;transition:border-color .2s}
+.cat-fields select option{background:var(--surface2)}
+.cat-fields input:focus,.cat-fields select:focus,.cat-fields textarea:focus{border-color:var(--teal)}
+.cat-footer{display:flex;align-items:center;gap:10px;margin-top:4px}
+.cat-delete-btn{background:none;border:1px solid rgba(255,82,82,.4);color:var(--red);font-size:10px;padding:4px 9px;border-radius:6px;cursor:pointer;font-family:var(--mono);transition:all .2s;margin-left:auto}
+.cat-delete-btn:hover{background:rgba(255,82,82,.1)}
+.add-cat-btn{width:100%;background:var(--teal-glow);border:1px dashed var(--teal-dim);color:var(--teal);font-family:var(--mono);font-size:12px;padding:10px;border-radius:10px;cursor:pointer;transition:all .2s}
+.add-cat-btn:hover{background:rgba(0,229,176,.2)}
+.id-tip{font-size:10px;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:10px;line-height:1.6}
+.id-tip strong{color:var(--teal)}
+/* LOG */
+.log-filter{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.filter-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-dim);font-family:var(--mono);font-size:10px;padding:5px 10px;border-radius:6px;cursor:pointer;transition:all .2s}
+.filter-btn.active{border-color:var(--teal);color:var(--teal);background:var(--teal-glow)}
+.log-date-group{margin-bottom:14px}
+.log-date-label{font-size:10px;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+.log-entry{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:5px}
+.log-entry-header{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.log-entry-notes{font-size:10px;color:var(--text-dim);line-height:1.5;font-style:italic}
+.log-ident{font-size:10px;color:var(--teal-dim);margin-top:3px}
+.log-entry-meta{display:flex;gap:12px;margin-top:5px;font-size:10px;color:var(--text-dim)}
+.alert-card{background:rgba(255,82,82,.08);border:1px solid rgba(255,82,82,.3);border-radius:8px;padding:8px 10px;margin-top:5px}
+.alert-card.warn{background:rgba(255,183,77,.08);border-color:rgba(255,183,77,.3)}
+.alert-title{font-size:11px;color:var(--red);font-weight:700;margin-bottom:3px}
+.alert-card.warn .alert-title{color:var(--amber)}
+.alert-body{font-size:10px;color:var(--text)}
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px}
+.stat-val{font-family:var(--sans);font-size:26px;font-weight:800;color:var(--teal);line-height:1;margin-bottom:3px}
+.stat-label{font-size:10px;color:var(--text-dim)}
+.cat-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px}
+.cat-panel-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cat-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px}
+.cat-panel-name{font-family:var(--sans);font-weight:700;font-size:13px;color:var(--text-bright)}
+.cat-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mini-stat{text-align:center}
+.mini-stat .val{font-size:17px;font-weight:700;color:var(--teal);font-family:var(--sans)}
+.mini-stat .lbl{font-size:9px;color:var(--text-dim)}
+.timeline-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px}
+.timeline-hours{display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);margin-bottom:7px}
+.timeline-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.timeline-cat-label{font-size:10px;color:var(--text-dim);width:50px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.timeline-bar{flex:1;height:18px;background:var(--surface2);border-radius:4px;position:relative;overflow:hidden}
+.timeline-event{position:absolute;top:2px;bottom:2px;border-radius:3px;min-width:4px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--surface2);border:1px solid var(--border);color:var(--text-bright);font-size:12px;padding:9px 18px;border-radius:20px;transition:transform .3s;z-index:999;white-space:nowrap;max-width:90vw;text-align:center}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.success{border-color:var(--teal);color:var(--teal)}
+#toast.error{border-color:var(--red);color:var(--red)}
+#setupOverlay{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center}
+#setupOverlay.hidden{display:none}
+#setupOverlay h2{font-family:var(--sans);font-size:22px;font-weight:800;color:var(--text-bright);margin-bottom:8px}
+#setupOverlay p{font-size:12px;color:var(--text-dim);margin-bottom:20px;line-height:1.6}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.empty{text-align:center;padding:36px 20px;color:var(--text-dim);font-size:12px}
+.empty-icon{font-size:36px;margin-bottom:10px}
 </style>
 </head>
 <body>
 
 <div id="setupOverlay">
-  <div style="font-size:48px;margin-bottom:16px">🐱</div>
-  <h2>貓貓廁所監察站</h2>
-  <p>請先到「設定」頁填寫<br>Claude API Key 及兩隻貓貓資料<br>再返回「監察」啟動鏡頭</p>
-  <button class="btn primary" style="margin-top:8px" onclick="document.getElementById('setupOverlay').classList.add('hidden'); switchTab('settings')">前往設定 →</button>
-  <button class="btn" style="margin-top:8px" onclick="document.getElementById('setupOverlay').classList.add('hidden')">我已設定好</button>
+  <div style="font-size:44px;margin-bottom:14px">🐱</div>
+  <h2 id="so-title">貓貓廁所監察站</h2>
+  <p id="so-desc">請先到「設定」填寫 Claude API Key<br>及貓貓資料，再啟動監察</p>
+  <button class="btn primary" style="margin-top:8px" onclick="document.getElementById('setupOverlay').classList.add('hidden');switchTab('settings')" id="so-go">前往設定 →</button>
+  <button class="btn" style="margin-top:8px" onclick="document.getElementById('setupOverlay').classList.add('hidden')" id="so-skip">我已設定好</button>
 </div>
 
 <header>
   <div style="font-size:20px">🐱</div>
-  <h1>貓貓<span>廁所</span>監察</h1>
+  <h1 id="hdr-title">貓貓<span>廁所</span>監察</h1>
+  <button class="lang-btn" onclick="toggleLang()" id="langBtn">EN</button>
   <div class="status-dot" id="statusDot"></div>
 </header>
 
@@ -588,1243 +184,865 @@
 
 <div class="pages">
 
-  <!-- ══ MONITOR PAGE ══ -->
-  <div class="page active" id="page-monitor">
-    <div class="camera-wrap">
-      <video id="videoEl" autoplay muted playsinline></video>
-      <canvas id="roiCanvas"></canvas>
-      <div class="cam-overlay" id="camOverlay">待機中</div>
-      <div class="cam-status" id="camStatus">未啟動</div>
-    </div>
-    <div class="hint" id="roiHint">啟動鏡頭後，長按拖曳設定貓砂盤範圍</div>
-
-    <div class="monitor-controls">
-      <button class="btn primary full" id="btnStart" onclick="startCamera()">🎥 啟動監察</button>
-      <button class="btn" id="btnStop" onclick="stopCamera()" disabled>⏹ 停止</button>
-    </div>
-
-    <div class="motion-meter-wrap">
-      <div class="meter-label">
-        <span>動態偵測</span>
-        <span id="motionVal">0%</span>
-      </div>
-      <div class="meter-bar"><div class="meter-fill" id="motionFill"></div></div>
-    </div>
-
-    <div class="session-card" id="sessionCard">
-      <div class="session-title">🔴 進行中 — <span id="sessionCatName">偵測中...</span></div>
-      <div class="session-info">
-        <div class="info-item"><label>開始時間</label><span id="sessionStart">—</span></div>
-        <div class="info-item"><label>持續時間</label><span id="sessionDur">0s</span></div>
-        <div class="info-item"><label>判斷活動</label><span id="sessionActivity">分析中...</span></div>
-        <div class="info-item"><label>信心度</label><span id="sessionConf">—</span></div>
-      </div>
-    </div>
-
-    <div class="section-title">最近記錄</div>
-    <div class="event-list" id="recentEvents">
-      <div class="no-events">尚無記錄</div>
+<!-- MONITOR -->
+<div class="page active" id="page-monitor">
+  <div class="camera-wrap">
+    <video id="videoEl" autoplay muted playsinline></video>
+    <canvas id="roiCanvas"></canvas>
+    <div class="cam-overlay" id="camOverlay">待機中</div>
+    <div class="cam-status" id="camStatus">未啟動</div>
+  </div>
+  <div class="hint" id="roiHint">啟動後長按拖曳設定貓砂盤範圍</div>
+  <div class="monitor-controls">
+    <button class="btn primary" id="btnStart" onclick="startCamera()" style="flex:1">🎥 啟動監察</button>
+    <button class="btn" id="btnStop" onclick="stopCamera()" disabled>⏹ 停止</button>
+  </div>
+  <div class="motion-meter-wrap">
+    <div class="meter-label"><span id="motionLabel">動態偵測</span><span id="motionVal">0%</span></div>
+    <div class="meter-bar"><div class="meter-fill" id="motionFill"></div></div>
+  </div>
+  <div class="session-card" id="sessionCard">
+    <div class="session-title">🔴 <span id="sessionActiveLabel">進行中</span> — <span id="sessionCatName">...</span></div>
+    <div class="session-info">
+      <div class="info-item"><label id="startTimeLabel">開始時間</label><span id="sessionStart">—</span></div>
+      <div class="info-item"><label id="durationLabel">持續時間</label><span id="sessionDur">0s</span></div>
+      <div class="info-item"><label id="activityLabel">活動判斷</label><span id="sessionActivity">...</span></div>
+      <div class="info-item"><label id="confidenceLabel">信心度</label><span id="sessionConf">—</span></div>
     </div>
   </div>
-
-  <!-- ══ LOG PAGE ══ -->
-  <div class="page" id="page-log">
-    <div class="log-filter">
-      <button class="filter-btn active" onclick="setFilter('all', this)">全部</button>
-      <button class="filter-btn" onclick="setFilter('cat1', this)" id="filterCat1Btn">貓貓1</button>
-      <button class="filter-btn" onclick="setFilter('cat2', this)" id="filterCat2Btn">貓貓2</button>
-      <button class="filter-btn" onclick="setFilter('pee', this)">尿尿</button>
-      <button class="filter-btn" onclick="setFilter('poop', this)">大便</button>
-      <button class="filter-btn" onclick="setFilter('alert', this)">⚠️ 警告</button>
-    </div>
-    <div id="logContainer">
-      <div class="empty"><div class="empty-icon">📋</div>記錄會在貓貓使用廁所後出現</div>
-    </div>
-    <button class="btn danger" style="width:100%;margin-top:16px" onclick="clearAllLogs()">清除所有記錄</button>
-  </div>
-
-  <!-- ══ STATS PAGE ══ -->
-  <div class="page" id="page-stats">
-    <div id="statsContainer">
-      <div class="empty"><div class="empty-icon">📊</div>收集到記錄後會顯示統計</div>
-    </div>
-  </div>
-
-  <!-- ══ SETTINGS PAGE ══ -->
-  <div class="page" id="page-settings">
-    <div class="settings-section">
-      <div class="settings-section-title">🔑 API 設定</div>
-      <div class="field">
-        <label>Claude API Key</label>
-        <input type="password" id="apiKey" placeholder="sk-ant-...">
-      </div>
-      <div class="field">
-        <label>Claude 模型（建議用 Haiku 慳錢）</label>
-        <select id="apiModel">
-          <option value="claude-haiku-3-5-20251001">claude-haiku-3-5（~$0.30/週，推薦）</option>
-          <option value="claude-sonnet-4-5-20251022">claude-sonnet-4-5（~$1.20/週，更準）</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <div class="settings-section-title">🐱 貓貓識別資料</div>
-
-      <div class="id-tip">
-        <strong>識別準確度提示：</strong><br>
-        上載清晰參考相 → 填寫品種 → 描述獨特特徵（愈詳細愈好）<br>
-        同色同品種嘅貓，AI 會靠<strong>體型差異、面部特徵、獨特標記</strong>區分<br>
-        若真係分唔到，會記為「未知」而唔會亂估
-      </div>
-
-      <!-- CAT 1 -->
-      <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <div id="cat1ColorDotPreview" style="width:12px;height:12px;border-radius:50%;background:#ff9800"></div>
-          <span style="font-size:12px;color:var(--text-bright);font-weight:700">貓貓一</span>
-          <input type="color" id="cat1ColorDot" value="#ff9800" style="width:28px;height:28px;border:none;background:none;cursor:pointer;margin-left:auto"
-            oninput="document.getElementById('cat1ColorDotPreview').style.background=this.value">
-        </div>
-        <div class="photo-upload-row">
-          <div class="photo-preview-wrap" id="cat1PhotoWrap">
-            <span class="upload-icon">📷</span>
-            <span class="upload-label">參考相</span>
-            <input type="file" accept="image/*" id="cat1PhotoFile" onchange="handlePhotoUpload('cat1', this)">
-          </div>
-          <div class="photo-fields">
-            <input type="text" id="cat1Name" placeholder="貓貓名字（例如：多多）">
-            <input type="text" id="cat1Breed" placeholder="品種（例如：英短、緬因貓、混種）">
-            <textarea id="cat1Desc" rows="3" placeholder="獨特特徵：毛色花紋、體型大細、面部特徵、任何獨特標記&#10;例如：橙色虎斑，右眼下有一粒黑痣，體型較大，尾巴較短"></textarea>
-          </div>
-        </div>
-      </div>
-
-      <!-- CAT 2 -->
-      <div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-          <div id="cat2ColorDotPreview" style="width:12px;height:12px;border-radius:50%;background:#9c27b0"></div>
-          <span style="font-size:12px;color:var(--text-bright);font-weight:700">貓貓二</span>
-          <input type="color" id="cat2ColorDot" value="#9c27b0" style="width:28px;height:28px;border:none;background:none;cursor:pointer;margin-left:auto"
-            oninput="document.getElementById('cat2ColorDotPreview').style.background=this.value">
-        </div>
-        <div class="photo-upload-row">
-          <div class="photo-preview-wrap" id="cat2PhotoWrap">
-            <span class="upload-icon">📷</span>
-            <span class="upload-label">參考相</span>
-            <input type="file" accept="image/*" id="cat2PhotoFile" onchange="handlePhotoUpload('cat2', this)">
-          </div>
-          <div class="photo-fields">
-            <input type="text" id="cat2Name" placeholder="貓貓名字（例如：咪咪）">
-            <input type="text" id="cat2Breed" placeholder="品種（例如：英短、波斯、混種）">
-            <textarea id="cat2Desc" rows="3" placeholder="獨特特徵：毛色花紋、體型大細、面部特徵、任何獨特標記&#10;例如：全黑色，胸口有一撮白毛，體型較細，耳朵較大"></textarea>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <div class="settings-section-title">🔔 通知設定</div>
-      <div class="field">
-        <label>Discord Webhook URL</label>
-        <input type="url" id="discordWebhook" placeholder="https://discord.com/api/webhooks/...">
-      </div>
-      <div class="field">
-        <label>Telegram Bot Token</label>
-        <input type="text" id="tgToken" placeholder="123456789:AABBcc...">
-      </div>
-      <div class="field">
-        <label>Telegram Chat ID（你嘅 user ID 或 group ID）</label>
-        <input type="text" id="tgChatId" placeholder="-1001234567890">
-      </div>
-      <div class="test-btn-row">
-        <button class="btn" onclick="testDiscord()">測試 Discord</button>
-        <button class="btn" onclick="testTelegram()">測試 Telegram</button>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <div class="settings-section-title">⚙️ 偵測設定</div>
-      <div class="field">
-        <label>動態敏感度（數值越低越敏感）<span id="sensitivityVal" style="color:var(--teal)">15%</span></label>
-        <input type="range" id="sensitivity" min="3" max="30" value="15" oninput="document.getElementById('sensitivityVal').textContent=this.value+'%'">
-        <div class="range-labels"><span>極敏感</span><span>一般</span><span>低敏感</span></div>
-      </div>
-      <div class="field">
-        <label>觸發前需持續郁動（秒）</label>
-        <input type="number" id="triggerDelay" value="3" min="1" max="10">
-      </div>
-      <div class="field">
-        <label>靜止多少秒後結束 session</label>
-        <input type="number" id="sessionEndDelay" value="30" min="10" max="120">
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <div class="settings-section-title">🏥 健康警告設定</div>
-      <div class="field">
-        <label>多少小時無記錄發警告（0=停用）</label>
-        <input type="number" id="alertNoVisit" value="24" min="0" max="72">
-      </div>
-      <div class="field">
-        <label>每日如廁次數上限（超過發警告）</label>
-        <input type="number" id="alertMaxDaily" value="8" min="3" max="20">
-      </div>
-      <div class="field">
-        <label>單次如廁最長時間警告（分鐘）</label>
-        <input type="number" id="alertMaxDuration" value="15" min="5" max="60">
-      </div>
-    </div>
-
-    <button class="btn primary full" style="width:100%;margin-bottom:8px" onclick="saveSettings()">💾 儲存設定</button>
-    <button class="btn full" style="width:100%" onclick="exportLogs()">📤 匯出記錄 (JSON)</button>
-  </div>
-
+  <div class="section-title" id="recentTitle">最近記錄</div>
+  <div class="event-list" id="recentEvents"><div class="no-events" id="noRecordsMsg">尚無記錄</div></div>
 </div>
 
+<!-- LOG -->
+<div class="page" id="page-log">
+  <div class="log-filter" id="logFilterRow"></div>
+  <div id="logContainer"><div class="empty"><div class="empty-icon">📋</div><span id="logEmptyMsg">記錄會在貓貓使用廁所後出現</span></div></div>
+  <button class="btn danger" style="width:100%;margin-top:14px" onclick="clearAllLogs()" id="clearLogsBtn">清除所有記錄</button>
+</div>
+
+<!-- STATS -->
+<div class="page" id="page-stats">
+  <div id="statsContainer"><div class="empty"><div class="empty-icon">📊</div><span id="statsEmptyMsg">收集到記錄後會顯示統計</span></div></div>
+</div>
+
+<!-- SETTINGS -->
+<div class="page" id="page-settings">
+  <div class="settings-section">
+    <div class="settings-section-title" id="sectionAPI">🔑 API 設定</div>
+    <div class="field">
+      <label id="apiKeyLabel">Claude API Key</label>
+      <input type="password" id="apiKey" placeholder="sk-ant-...">
+    </div>
+    <div class="field">
+      <label id="modelLabel">Claude 模型</label>
+      <select id="apiModel">
+        <option value="claude-haiku-3-5-20251001" id="modelHaikuOpt">claude-haiku-3-5（~$0.40/週，推薦）</option>
+        <option value="claude-sonnet-4-5-20251022" id="modelSonnetOpt">claude-sonnet-4-5（~$1.50/週，更準）</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title" id="sectionCats">🐱 貓貓識別資料</div>
+    <div class="id-tip" id="idTip">
+      <strong>識別準確度：</strong>上載清晰參考相 + 填寫品種 + 描述獨特特徵<br>
+      若真係分唔清，會記為「未知」，唔會亂估
+    </div>
+    <div class="cat-cards" id="catCards"></div>
+    <button class="add-cat-btn" onclick="addCat()" id="addCatBtn">＋ 新增貓貓</button>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title" id="sectionNotif">🔔 通知設定</div>
+    <div class="field">
+      <label>Discord Webhook URL</label>
+      <input type="url" id="discordWebhook" placeholder="https://discord.com/api/webhooks/...">
+    </div>
+    <div class="field">
+      <label>Telegram Bot Token</label>
+      <input type="text" id="tgToken" placeholder="123456789:AABBcc...">
+    </div>
+    <div class="field">
+      <label id="tgChatLabel">Telegram Chat ID</label>
+      <input type="text" id="tgChatId" placeholder="-1001234567890">
+    </div>
+    <div class="test-btn-row">
+      <button class="btn sm" onclick="testDiscord()" id="testDiscordBtn">測試 Discord</button>
+      <button class="btn sm" onclick="testTelegram()" id="testTelegramBtn">測試 Telegram</button>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title" id="sectionDetect">⚙️ 偵測設定</div>
+    <div class="field">
+      <label><span id="sensitivityLabel">動態敏感度（數值越低越敏感）</span> <span id="sensitivityVal" style="color:var(--teal)">15%</span></label>
+      <input type="range" id="sensitivity" min="3" max="30" value="15" oninput="document.getElementById('sensitivityVal').textContent=this.value+'%'">
+      <div class="range-labels"><span id="verySensitive">極敏感</span><span id="normalSens">一般</span><span id="lowSensitive">低敏感</span></div>
+    </div>
+    <div class="field">
+      <label id="triggerLabel">持續郁動多少秒後開始 Session（秒）</label>
+      <input type="number" id="triggerDelay" value="3" min="1" max="10">
+      <div class="field-hint" id="triggerHint">避免短暫郁動誤觸發，建議 3 秒</div>
+    </div>
+    <div class="field">
+      <label id="sessionEndLabel">靜止多少秒後結束 Session（秒）</label>
+      <input type="number" id="sessionEndDelay" value="45" min="10" max="120">
+      <div class="field-hint" id="sessionEndHint">貓貓離開砂盤後，等多少秒先儲存呢次如廁記錄。建議 45 秒，因為貓咪掩沙時會短暫停止郁動，唔想誤以為佢已離開</div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <div class="settings-section-title" id="sectionHealth">🏥 健康警告設定</div>
+    <div class="field">
+      <label id="alertNoVisitLabel">多少小時無記錄發警告（0 = 停用）</label>
+      <input type="number" id="alertNoVisit" value="24" min="0" max="72">
+    </div>
+    <div class="field">
+      <label id="alertMaxDailyLabel">每日如廁次數上限（超過發警告）</label>
+      <input type="number" id="alertMaxDaily" value="8" min="3" max="20">
+    </div>
+    <div class="field">
+      <label id="alertMaxDurLabel">單次如廁最長時間警告（分鐘）</label>
+      <input type="number" id="alertMaxDuration" value="15" min="5" max="60">
+    </div>
+  </div>
+
+  <button class="btn primary" style="width:100%;margin-bottom:8px" onclick="saveSettings()" id="saveBtn">💾 儲存設定</button>
+  <button class="btn" style="width:100%" onclick="exportLogs()" id="exportBtn">📤 匯出記錄 (JSON)</button>
+</div>
+
+</div>
 <div id="toast"></div>
 
 <script>
-// ════════════════════════════════════════
-// STATE
-// ════════════════════════════════════════
-let stream = null;
-let motionWorker = null;
-let analysisInterval = null;
-let sessionEndTimer = null;
-let sessionStartTime = null;
-let sessionApiCalls = [];
-let sessionTimerInterval = null;
-let isInSession = false;
-let motionStartTime = null;
-let wakeLock = null;
-let lastFrameData = null;
-let motionPct = 0;
-let currentFilter = 'all';
-
-// ROI state
-let roi = null; // {x,y,w,h} in 0-1 normalized coords
-let isDrawingROI = false;
-let roiStart = null;
-
-const ANALYZE_INTERVAL_MS = 20000; // max once per 20s during session
-let lastAnalyzeTime = 0;
-
-// ════════════════════════════════════════
-// SETTINGS
-// ════════════════════════════════════════
-const DEFAULTS = {
-  apiKey: '', apiModel: 'claude-haiku-3-5-20251001',
-  cat1Name: '貓貓一', cat1Breed: '', cat1Desc: '', cat1ColorDot: '#ff9800',
-  cat2Name: '貓貓二', cat2Breed: '', cat2Desc: '', cat2ColorDot: '#9c27b0',
-  discordWebhook: '', tgToken: '', tgChatId: '',
-  sensitivity: 15, triggerDelay: 3, sessionEndDelay: 30,
-  alertNoVisit: 24, alertMaxDaily: 8, alertMaxDuration: 15
+// ═══════════════════════════════════════
+// i18n
+// ═══════════════════════════════════════
+const BREEDS = {
+  zh: ['不選擇（自行描述）','暹羅 Siamese','波斯 Persian','緬因貓 Maine Coon','英國短毛 British Shorthair','蘇格蘭摺耳 Scottish Fold','美國短毛 American Shorthair','布偶貓 Ragdoll','孟加拉貓 Bengal','阿比西尼亞 Abyssinian','俄羅斯藍貓 Russian Blue','挪威森林貓 Norwegian Forest','土耳其梵貓 Turkish Van','東方短毛 Oriental Shorthair','伯曼 Birman','新加坡貓 Singapura','虎斑 Tabby','橘貓 Orange Tabby','三花 Calico','玳瑁 Tortoiseshell','純黑 All Black','純白 All White','混種 Mixed Breed'],
+  en: ['No selection (describe manually)','Siamese','Persian','Maine Coon','British Shorthair','Scottish Fold','American Shorthair','Ragdoll','Bengal','Abyssinian','Russian Blue','Norwegian Forest Cat','Turkish Van','Oriental Shorthair','Birman','Singapura','Tabby','Orange Tabby','Calico','Tortoiseshell','All Black','All White','Mixed Breed']
 };
 
-function loadSettings() {
-  const s = JSON.parse(localStorage.getItem('catmon_settings') || '{}');
-  return { ...DEFAULTS, ...s };
-}
+const STRINGS = {
+  zh: {
+    appTitle:'貓貓廁所監察',hdrTitle:'貓貓<span>廁所</span>監察',
+    soTitle:'貓貓廁所監察站',soDesc:'請先到「設定」填寫 Claude API Key<br>及貓貓資料，再啟動監察',
+    soGo:'前往設定 →',soSkip:'我已設定好',
+    tabMonitor:'📷 監察',tabLog:'📋 記錄',tabStats:'📊 分析',tabSettings:'⚙️ 設定',
+    camStandby:'待機中',camNotStarted:'未啟動',roiHint:'啟動後長按拖曳設定貓砂盤範圍',
+    startBtn:'🎥 啟動監察',stopBtn:'⏹ 停止',
+    motionLabel:'動態偵測',sessionActiveLabel:'進行中',
+    startTimeLabel:'開始時間',durationLabel:'持續時間',activityLabel:'活動判斷',confidenceLabel:'信心度',
+    recentTitle:'最近記錄',noRecordsMsg:'尚無記錄',logEmptyMsg:'記錄會在貓貓使用廁所後出現',
+    statsEmptyMsg:'收集到記錄後會顯示統計',clearLogsBtn:'清除所有記錄',
+    sectionAPI:'🔑 API 設定',apiKeyLabel:'Claude API Key',modelLabel:'Claude 模型',
+    modelHaikuOpt:'claude-haiku-3-5（~$0.40/週，推薦）',modelSonnetOpt:'claude-sonnet-4-5（~$1.50/週，更準）',
+    sectionCats:'🐱 貓貓識別資料',
+    idTip:'<strong>識別準確度：</strong>上載清晰參考相 + 填寫品種 + 描述獨特特徵<br>若真係分唔清，會記為「未知」，唔會亂估',
+    addCatBtn:'＋ 新增貓貓',catNamePH:'貓貓名字',breedPH:'選擇品種',
+    descPH:'獨特特徵：花紋位置、體型大細、耳型、面部標記等\n例如：右耳底有一粒黑痣，體型較大',
+    photoLabel:'參考相',colorLabel:'顏色標記',deleteCat:'刪除',
+    sectionNotif:'🔔 通知設定',tgChatLabel:'Telegram Chat ID',
+    testDiscordBtn:'測試 Discord',testTelegramBtn:'測試 Telegram',
+    sectionDetect:'⚙️ 偵測設定',
+    sensitivityLabel:'動態敏感度（數值越低越敏感）',
+    verySensitive:'極敏感',normalSens:'一般',lowSensitive:'低敏感',
+    triggerLabel:'持續郁動多少秒後開始 Session（秒）',
+    triggerHint:'避免短暫郁動誤觸發，建議 3 秒',
+    sessionEndLabel:'靜止多少秒後結束 Session（秒）',
+    sessionEndHint:'貓貓離開砂盤後，等多少秒先儲存呢次如廁記錄。建議 45 秒，因為貓咪掩沙時會短暫停止郁動，唔想誤以為佢已離開',
+    sectionHealth:'🏥 健康警告設定',
+    alertNoVisitLabel:'多少小時無記錄發警告（0 = 停用）',
+    alertMaxDailyLabel:'每日如廁次數上限（超過發警告）',
+    alertMaxDurLabel:'單次如廁最長時間警告（分鐘）',
+    saveBtn:'💾 儲存設定',exportBtn:'📤 匯出記錄 (JSON)',
+    filterAll:'全部',filterPee:'尿尿',filterPoop:'大便',filterAlert:'⚠️ 警告',
+    todayCount:'今日次數',weekPee:'本週尿',weekPoop:'本週便',
+    weekTotal:'本週總記錄',allTotal:'全部記錄',lastVisit:'上次：',noLog:'無記錄',
+    healthAlerts:'健康警告',todayTimeline:'今日時間軸',peeLabel:'■ 尿尿',poopLabel:'■ 大便',
+    settingsSaved:'✅ 設定已儲存',catNameRequired:'請填寫貓貓名字',unknownCat:'未知',
+    analyzing:'🔵 分析中...',inSession:'🔴 進行中',monitoring:'📷 監察中',
+    actPee:'💧 尿尿',actPoop:'💩 大便',actInvestigate:'👀 探索',actCover:'⛏ 掩沙',actExit:'🚪 離開',actNone:'—',actUnknown:'❓ 分唔清',
+    warnLabel:'⚠️ 注意',alertLabel:'🚨 警告',
+    logsCleared:'記錄已清除',logsClearConfirm:'確定清除所有記錄？',
+    discordOK:'✅ Discord 測試成功',discordFail:'❌ Discord 測試失敗',
+    tgOK:'✅ Telegram 測試成功',tgFail:'❌ Telegram 錯誤',
+    tgFillAll:'請填寫 Telegram Token 同 Chat ID',discordFillAll:'請先填寫 Discord Webhook URL',
+    apiKeyRequired:'❌ 請先填寫 Claude API Key',camError:'❌ 無法存取鏡頭',
+    photoSaved:'參考相已儲存',photoTooLarge:'❌ 相片太大，請選細一啲',
+    catAdded:'已新增貓貓',catDeleted:'已刪除',
+    sessionFor:'如廁紀錄',avgPerSession:'平均每次',weekVisits:'本週如廁',
+    ds:'秒',dm:'分',secAgo:'秒前',minAgo:'分前',hrAgo:'小時前',dayAgo:'日前',
+    minCatError:'最少保留一隻貓貓',deleteConfirm:'刪除',
+    identBasisPfx:'🔍',
+    hrAgoSuffix:' 小時未有如廁記錄',timesToday:' 次，次數偏多',tooLong:'，時間過長',
+    noPoopSuffix:'超過 48 小時未有大便記錄'
+  },
+  en: {
+    appTitle:'Cat Litter Monitor',hdrTitle:'Cat <span>Litter</span> Monitor',
+    soTitle:'Cat Litter Monitor',soDesc:'Please go to Settings, enter your Claude API Key and cat profiles first',
+    soGo:'Go to Settings →',soSkip:"I'm all set",
+    tabMonitor:'📷 Monitor',tabLog:'📋 Log',tabStats:'📊 Stats',tabSettings:'⚙️ Settings',
+    camStandby:'Standby',camNotStarted:'Not started',roiHint:'After start, drag to set litter box zone',
+    startBtn:'🎥 Start Monitor',stopBtn:'⏹ Stop',
+    motionLabel:'Motion',sessionActiveLabel:'Active',
+    startTimeLabel:'Start',durationLabel:'Duration',activityLabel:'Activity',confidenceLabel:'Confidence',
+    recentTitle:'Recent',noRecordsMsg:'No records yet',logEmptyMsg:'Records appear after litter box visits',
+    statsEmptyMsg:'Stats appear once records are collected',clearLogsBtn:'Clear All Logs',
+    sectionAPI:'🔑 API Settings',apiKeyLabel:'Claude API Key',modelLabel:'Claude Model',
+    modelHaikuOpt:'claude-haiku-3-5 (~$0.40/week, recommended)',modelSonnetOpt:'claude-sonnet-4-5 (~$1.50/week, more accurate)',
+    sectionCats:'🐱 Cat Profiles',
+    idTip:'<strong>Identification accuracy:</strong> Upload a clear reference photo + select breed + describe unique features.<br>If unsure, records as "unknown" — never guesses.',
+    addCatBtn:'＋ Add Cat',catNamePH:"Cat's name",breedPH:'Select breed',
+    descPH:'Unique features: markings, size, ear shape, facial marks...\ne.g. Black spot under right ear, larger build',
+    photoLabel:'Photo',colorLabel:'Colour tag',deleteCat:'Delete',
+    sectionNotif:'🔔 Notifications',tgChatLabel:'Telegram Chat ID',
+    testDiscordBtn:'Test Discord',testTelegramBtn:'Test Telegram',
+    sectionDetect:'⚙️ Detection Settings',
+    sensitivityLabel:'Motion sensitivity (lower = more sensitive)',
+    verySensitive:'Very sensitive',normalSens:'Normal',lowSensitive:'Low',
+    triggerLabel:'Seconds of motion to trigger session',
+    triggerHint:'Prevents false triggers. 3 seconds recommended.',
+    sessionEndLabel:'Seconds of stillness to end session',
+    sessionEndHint:'How long to wait after the cat leaves before saving the record. 45s recommended — cats pause while covering litter.',
+    sectionHealth:'🏥 Health Alert Settings',
+    alertNoVisitLabel:'Hours without visit before alert (0 = off)',
+    alertMaxDailyLabel:'Max daily visits before alert',
+    alertMaxDurLabel:'Max session duration alert (minutes)',
+    saveBtn:'💾 Save Settings',exportBtn:'📤 Export Logs (JSON)',
+    filterAll:'All',filterPee:'Pee',filterPoop:'Poop',filterAlert:'⚠️ Alerts',
+    todayCount:"Today",weekPee:'Pee /wk',weekPoop:'Poop /wk',
+    weekTotal:'This Week',allTotal:'All Records',lastVisit:'Last: ',noLog:'No records',
+    healthAlerts:'Health Alerts',todayTimeline:"Today's Timeline",peeLabel:'■ Pee',poopLabel:'■ Poop',
+    settingsSaved:'✅ Settings saved',catNameRequired:"Please enter the cat's name",unknownCat:'Unknown',
+    analyzing:'🔵 Analyzing...',inSession:'🔴 Active',monitoring:'📷 Monitoring',
+    actPee:'💧 Urinating',actPoop:'💩 Defecating',actInvestigate:'👀 Investigating',actCover:'⛏ Covering',actExit:'🚪 Exiting',actNone:'—',actUnknown:'❓ Unclear',
+    warnLabel:'⚠️ Warning',alertLabel:'🚨 Alert',
+    logsCleared:'Logs cleared',logsClearConfirm:'Clear all logs?',
+    discordOK:'✅ Discord test OK',discordFail:'❌ Discord test failed',
+    tgOK:'✅ Telegram test OK',tgFail:'❌ Telegram error',
+    tgFillAll:'Please fill Telegram Token and Chat ID',discordFillAll:'Please fill Discord Webhook URL first',
+    apiKeyRequired:'❌ Please add Claude API Key in Settings',camError:'❌ Cannot access camera',
+    photoSaved:'Reference photo saved',photoTooLarge:'❌ Photo too large, choose a smaller one',
+    catAdded:'Cat added',catDeleted:'Deleted',
+    sessionFor:'Litter box visit',avgPerSession:'Avg per visit',weekVisits:'Visits /wk',
+    ds:'s',dm:'m',secAgo:'s ago',minAgo:'m ago',hrAgo:'h ago',dayAgo:'d ago',
+    minCatError:'At least one cat required',deleteConfirm:'Delete',
+    identBasisPfx:'🔍',
+    hrAgoSuffix:' hours without a visit',timesToday:' visits today (high)',tooLong:' — unusually long',
+    noPoopSuffix:'No defecation record for 48+ hours'
+  }
+};
 
-function saveSettings() {
-  const s = {
-    apiKey: v('apiKey'),
-    apiModel: v('apiModel'),
-    cat1Name: v('cat1Name'), cat1Breed: v('cat1Breed'), cat1Desc: v('cat1Desc'), cat1ColorDot: v('cat1ColorDot'),
-    cat2Name: v('cat2Name'), cat2Breed: v('cat2Breed'), cat2Desc: v('cat2Desc'), cat2ColorDot: v('cat2ColorDot'),
-    discordWebhook: v('discordWebhook'), tgToken: v('tgToken'), tgChatId: v('tgChatId'),
-    sensitivity: +v('sensitivity'), triggerDelay: +v('triggerDelay'), sessionEndDelay: +v('sessionEndDelay'),
-    alertNoVisit: +v('alertNoVisit'), alertMaxDaily: +v('alertMaxDaily'), alertMaxDuration: +v('alertMaxDuration')
-  };
-  localStorage.setItem('catmon_settings', JSON.stringify(s));
-  applySettingsToUI(s);
-  toast('✅ 設定已儲存', 'success');
-  document.getElementById('filterCat1Btn').textContent = s.cat1Name;
-  document.getElementById('filterCat2Btn').textContent = s.cat2Name;
-}
+let lang = localStorage.getItem('catmon_lang') || 'zh';
+const t = k => STRINGS[lang][k] || STRINGS.zh[k] || k;
 
-function v(id) { return document.getElementById(id)?.value || ''; }
-
-function applySettingsToUI(s) {
-  Object.keys(s).forEach(k => {
-    const el = document.getElementById(k);
-    if (el) el.value = s[k];
+function applyLang() {
+  // Static text nodes
+  const ids = Object.keys(STRINGS.zh).filter(k => document.getElementById(k));
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id==='hdrTitle') el.innerHTML = t('hdrTitle');
+    else if (id==='idTip') el.innerHTML = t('idTip');
+    else el.textContent = t(id);
   });
-  // Sync color dot previews
-  if (s.cat1ColorDot) document.getElementById('cat1ColorDotPreview').style.background = s.cat1ColorDot;
-  if (s.cat2ColorDot) document.getElementById('cat2ColorDotPreview').style.background = s.cat2ColorDot;
-  // Restore photo previews
-  ['cat1','cat2'].forEach(cat => {
-    const stored = localStorage.getItem(`catmon_photo_${cat}`);
-    if (stored) showPhotoPreview(cat, stored);
-  });
+  document.getElementById('langBtn').textContent = lang==='zh'?'EN':'中';
+  document.title = '🐱 ' + t('appTitle');
+  renderCatCards();
+  renderLogFilter();
 }
 
-function loadSettingsToForm() {
-  const s = loadSettings();
-  applySettingsToUI(s);
-  document.getElementById('filterCat1Btn').textContent = s.cat1Name;
-  document.getElementById('filterCat2Btn').textContent = s.cat2Name;
-  document.getElementById('sensitivityVal').textContent = s.sensitivity + '%';
+function toggleLang() {
+  lang = lang==='zh'?'en':'zh';
+  localStorage.setItem('catmon_lang', lang);
+  applyLang();
 }
 
-// ════════════════════════════════════════
-// LOGS
-// ════════════════════════════════════════
-function getLogs() { return JSON.parse(localStorage.getItem('catmon_logs') || '[]'); }
-function saveLogs(logs) { localStorage.setItem('catmon_logs', JSON.stringify(logs)); }
+// ═══════════════════════════════════════
+// CAT DATA
+// ═══════════════════════════════════════
+const DEFAULT_COLORS = ['#ff9800','#9c27b0','#2196f3','#4caf50','#e91e63','#00bcd4','#ff5722'];
 
-function addLog(entry) {
-  const logs = getLogs();
-  logs.unshift({ ...entry, id: Date.now() });
-  // Keep max 500 entries
-  if (logs.length > 500) logs.splice(500);
-  saveLogs(logs);
-  renderRecentEvents();
-  renderLog();
-  renderStats();
+function getCats() {
+  const s = localStorage.getItem('catmon_cats');
+  if (s) return JSON.parse(s);
+  return [
+    {id:'cat_1',name:'',breed:'',desc:'',colorDot:'#ff9800'},
+    {id:'cat_2',name:'',breed:'',desc:'',colorDot:'#9c27b0'}
+  ];
+}
+function saveCats(cats){ localStorage.setItem('catmon_cats',JSON.stringify(cats)); }
+function getCatById(id){ return getCats().find(c=>c.id===id); }
+function getCatName(id){ const c=getCatById(id); return c?(c.name||t('unknownCat')):t('unknownCat'); }
+function getCatColor(id){ const c=getCatById(id); return c?c.colorDot:'#5a7a96'; }
+
+// ═══════════════════════════════════════
+// CAT CARD UI
+// ═══════════════════════════════════════
+function renderCatCards() {
+  const cats = getCats();
+  document.getElementById('catCards').innerHTML = cats.map((cat,i)=>buildCatCard(cat,i)).join('');
 }
 
-function clearAllLogs() {
-  if (!confirm('確定清除所有記錄？')) return;
-  localStorage.removeItem('catmon_logs');
-  renderRecentEvents();
-  renderLog();
-  renderStats();
-  toast('記錄已清除');
+function breedOptions(sel) {
+  return BREEDS[lang].map((b,i)=>`<option value="${BREEDS.zh[i]}" ${BREEDS.zh[i]===sel?'selected':''}>${b}</option>`).join('');
 }
 
-function exportLogs() {
-  const logs = getLogs();
-  const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `catmon_logs_${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
+function buildCatCard(cat, idx) {
+  const photo = localStorage.getItem(`catmon_photo_${cat.id}`);
+  const thumbImg = photo ? `<img src="${photo}" alt="">` : `<span class="pi">📷</span><span class="pl">${t('photoLabel')}</span>`;
+  return `<div class="cat-card" id="card_${cat.id}">
+    <div class="cat-card-header" onclick="toggleCatCard('${cat.id}')">
+      <div class="cat-dot" style="background:${cat.colorDot};width:12px;height:12px;border-radius:50%"></div>
+      <div class="cat-name-display">${cat.name||'('+t('catNamePH')+')'}</div>
+      <div class="cat-breed-display">${cat.breed&&cat.breed!==BREEDS.zh[0]?cat.breed.split(' ')[0]:''}</div>
+      <span class="cat-card-chevron">▼</span>
+    </div>
+    <div class="cat-card-body">
+      <div class="photo-row">
+        <div class="photo-thumb" id="thumb_${cat.id}">
+          ${thumbImg}
+          <input type="file" accept="image/*" onchange="handlePhotoUpload('${cat.id}',this)">
+        </div>
+        <div class="cat-fields">
+          <input type="text" placeholder="${t('catNamePH')}" value="${cat.name}" oninput="updateCatField('${cat.id}','name',this.value)">
+          <select onchange="updateCatField('${cat.id}','breed',this.value)">${breedOptions(cat.breed)}</select>
+          <textarea rows="2" placeholder="${t('descPH')}" oninput="updateCatField('${cat.id}','desc',this.value)">${cat.desc}</textarea>
+        </div>
+      </div>
+      <div class="cat-footer">
+        <label style="font-size:10px;color:var(--text-dim)">${t('colorLabel')}</label>
+        <input type="color" value="${cat.colorDot}" style="width:34px;height:28px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;padding:2px"
+          oninput="updateCatField('${cat.id}','colorDot',this.value);document.querySelector('#card_${cat.id} .cat-card-header .cat-dot').style.background=this.value">
+        <button class="cat-delete-btn" onclick="deleteCat('${cat.id}')">${t('deleteCat')}</button>
+      </div>
+    </div>
+  </div>`;
 }
 
-// ════════════════════════════════════════
-// CAMERA & MOTION
-// ════════════════════════════════════════
-async function startCamera() {
-  const s = loadSettings();
-  if (!s.apiKey) { toast('❌ 請先填寫 Claude API Key', 'error'); switchTab('settings'); return; }
+function toggleCatCard(id){ document.getElementById('card_'+id).classList.toggle('open'); }
 
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    });
-    const video = document.getElementById('videoEl');
-    video.srcObject = stream;
-    await video.play();
-
-    document.getElementById('btnStart').disabled = true;
-    document.getElementById('btnStop').disabled = false;
-    setStatusDot('active');
-    setOverlay('📷 監察中');
-
-    setupROICanvas();
-    startMotionDetection();
-    acquireWakeLock();
-
-    if (!roi) {
-      // Default ROI: center 60%
-      roi = { x: 0.2, y: 0.2, w: 0.6, h: 0.6 };
-      drawROI();
-    }
-  } catch (e) {
-    toast('❌ 無法存取鏡頭: ' + e.message, 'error');
+function updateCatField(id,field,value){
+  const cats=getCats(), cat=cats.find(c=>c.id===id);
+  if (!cat) return;
+  cat[field]=value; saveCats(cats);
+  const card=document.getElementById('card_'+id);
+  if (card){
+    card.querySelector('.cat-name-display').textContent=cat.name||'('+t('catNamePH')+')';
+    const bd=card.querySelector('.cat-breed-display');
+    bd.textContent=cat.breed&&cat.breed!==BREEDS.zh[0]?cat.breed.split(' ')[0]:'';
   }
 }
 
-function stopCamera() {
-  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
-  stopMotionDetection();
-  if (wakeLock) { wakeLock.release(); wakeLock = null; }
-  document.getElementById('btnStart').disabled = false;
-  document.getElementById('btnStop').disabled = true;
-  setStatusDot('');
-  setOverlay('待機中');
-  setCamStatus('未啟動', '');
-  if (isInSession) endSession(true);
+function addCat(){
+  const cats=getCats(), newId='cat_'+Date.now();
+  const color=DEFAULT_COLORS[cats.length%DEFAULT_COLORS.length];
+  cats.push({id:newId,name:'',breed:'',desc:'',colorDot:color});
+  saveCats(cats); renderCatCards();
+  setTimeout(()=>{const c=document.getElementById('card_'+newId);if(c){c.classList.add('open');c.scrollIntoView({behavior:'smooth'});}},50);
+  toast(t('catAdded'),'success'); renderLogFilter();
 }
 
-async function acquireWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      wakeLock = await navigator.wakeLock.request('screen');
-    }
-  } catch (e) { console.log('WakeLock not available'); }
+function deleteCat(id){
+  const cats=getCats();
+  if (cats.length<=1){toast(t('minCatError'),'error');return;}
+  const name=getCatName(id);
+  if (!confirm(t('deleteConfirm')+' '+name+'？'))return;
+  saveCats(cats.filter(c=>c.id!==id));
+  localStorage.removeItem('catmon_photo_'+id);
+  renderCatCards(); renderLogFilter();
+  toast(name+' '+t('catDeleted'));
 }
 
-// ── Motion Detection ──
-let motionCanvas, motionCtx, prevFrame;
-let motionTimer = null;
-
-function startMotionDetection() {
-  motionCanvas = document.createElement('canvas');
-  motionCtx = motionCanvas.getContext('2d', { willReadFrequently: true });
-  motionCanvas.width = 160;
-  motionCanvas.height = 120;
-  prevFrame = null;
-
-  motionTimer = setInterval(detectMotion, 500);
-}
-
-function stopMotionDetection() {
-  if (motionTimer) { clearInterval(motionTimer); motionTimer = null; }
-}
-
-function detectMotion() {
-  const video = document.getElementById('videoEl');
-  if (!video.videoWidth) return;
-
-  const W = motionCanvas.width, H = motionCanvas.height;
-  motionCtx.drawImage(video, 0, 0, W, H);
-  const frame = motionCtx.getImageData(0, 0, W, H);
-
-  if (!prevFrame) { prevFrame = frame; return; }
-
-  const s = loadSettings();
-  const sensitivity = s.sensitivity;
-
-  // ROI in pixel coords
-  let rx = 0, ry = 0, rw = W, rh = H;
-  if (roi) {
-    rx = Math.floor(roi.x * W); ry = Math.floor(roi.y * H);
-    rw = Math.floor(roi.w * W); rh = Math.floor(roi.h * H);
-  }
-
-  let diff = 0, count = 0;
-  for (let y = ry; y < ry + rh; y++) {
-    for (let x = rx; x < rx + rw; x++) {
-      const i = (y * W + x) * 4;
-      const d = Math.abs(frame.data[i] - prevFrame.data[i]) +
-                Math.abs(frame.data[i+1] - prevFrame.data[i+1]) +
-                Math.abs(frame.data[i+2] - prevFrame.data[i+2]);
-      diff += d / 3;
-      count++;
-    }
-  }
-  const avgDiff = count > 0 ? diff / count : 0;
-  motionPct = Math.min(100, Math.round(avgDiff / 2.55));
-  prevFrame = frame;
-
-  updateMotionMeter(motionPct);
-
-  const threshold = sensitivity;
-  const hasMotion = motionPct >= threshold;
-
-  handleMotionState(hasMotion, s);
-}
-
-function handleMotionState(hasMotion, s) {
-  const now = Date.now();
-
-  if (hasMotion) {
-    setStatusDot('motion');
-    if (!motionStartTime) motionStartTime = now;
-
-    // Reset end timer
-    if (sessionEndTimer) { clearTimeout(sessionEndTimer); sessionEndTimer = null; }
-
-    const elapsed = (now - motionStartTime) / 1000;
-    if (elapsed >= s.triggerDelay && !isInSession) {
-      startSession();
-    }
-
-    if (isInSession && (now - lastAnalyzeTime) > ANALYZE_INTERVAL_MS) {
-      analyzeFrame();
-      lastAnalyzeTime = now;
-    }
-  } else {
-    setStatusDot(stream ? 'active' : '');
-    if (isInSession && !sessionEndTimer) {
-      sessionEndTimer = setTimeout(() => {
-        endSession(false);
-      }, s.sessionEndDelay * 1000);
-    }
-    if (!isInSession) motionStartTime = null;
-  }
-}
-
-// ════════════════════════════════════════
-// SESSION MANAGEMENT
-// ════════════════════════════════════════
-function startSession() {
-  isInSession = true;
-  sessionStartTime = new Date();
-  sessionApiCalls = [];
-  lastAnalyzeTime = 0;
-
-  document.getElementById('sessionCard').classList.add('visible');
-  document.getElementById('sessionStart').textContent = formatTime(sessionStartTime);
-  document.getElementById('sessionCatName').textContent = '偵測中...';
-  document.getElementById('sessionActivity').textContent = '分析中...';
-  document.getElementById('sessionConf').textContent = '—';
-
-  sessionTimerInterval = setInterval(updateSessionDuration, 1000);
-  setCamStatus('🔴 進行中', 'in-session');
-  setOverlay('🔴 Session 進行中');
-
-  // Immediate first analysis
-  analyzeFrame();
-  lastAnalyzeTime = Date.now();
-}
-
-function updateSessionDuration() {
-  if (!sessionStartTime) return;
-  const secs = Math.round((Date.now() - sessionStartTime) / 1000);
-  const m = Math.floor(secs / 60), s2 = secs % 60;
-  document.getElementById('sessionDur').textContent =
-    m > 0 ? `${m}m ${s2}s` : `${s2}s`;
-}
-
-async function endSession(aborted) {
-  isInSession = false;
-  if (sessionTimerInterval) { clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
-  if (sessionEndTimer) { clearTimeout(sessionEndTimer); sessionEndTimer = null; }
-  motionStartTime = null;
-  document.getElementById('sessionCard').classList.remove('visible');
-  setCamStatus('📷 監察中', '');
-  setOverlay('📷 監察中');
-
-  if (aborted || sessionApiCalls.length === 0) return;
-
-  // Final analysis if not done recently
-  if ((Date.now() - lastAnalyzeTime) > 5000) {
-    await analyzeFrame();
-  }
-
-  // Aggregate results
-  const duration = Math.round((Date.now() - sessionStartTime) / 1000);
-  const result = aggregateSession(sessionApiCalls, duration);
-
-  if (!result.catPresent) return; // No cat detected, ignore
-
-  const s = loadSettings();
-  const entry = {
-    timestamp: sessionStartTime.toISOString(),
-    endTimestamp: new Date().toISOString(),
-    duration,
-    cat: result.cat,
-    catName: result.cat === 'cat1' ? s.cat1Name : result.cat === 'cat2' ? s.cat2Name : '未知',
-    activity: result.activity,
-    confidence: result.confidence,
-    notes: result.notes,
-    identBasis: result.identBasis,
-    alerts: []
-  };
-
-  // Health checks
-  const alerts = checkHealth(entry, s);
-  entry.alerts = alerts;
-
-  addLog(entry);
-  await sendNotifications(entry, s, alerts);
-}
-
-function aggregateSession(calls, duration) {
-  if (calls.length === 0) return { catPresent: false };
-
-  // Find most common cat & activity
-  const catCounts = {};
-  const actCounts = {};
-  let notes = '';
-  let identBasis = '';
-  let totalConf = 0;
-  let validCalls = 0;
-
-  calls.forEach(c => {
-    if (!c || !c.cat_present) return;
-    validCalls++;
-    const cat = c.cat_identity || 'unknown';
-    catCounts[cat] = (catCounts[cat] || 0) + 1;
-    const act = c.activity || 'unknown';
-    actCounts[act] = (actCounts[act] || 0) + 1;
-    if (c.health_notes) notes = c.health_notes;
-    if (c.identification_basis) identBasis = c.identification_basis;
-    totalConf += c.confidence || 0.5;
-  });
-
-  if (validCalls === 0) return { catPresent: false };
-
-  const cat = Object.keys(catCounts).sort((a,b) => catCounts[b]-catCounts[a])[0];
-  const activity = Object.keys(actCounts).sort((a,b) => actCounts[b]-actCounts[a])[0];
-
-  return {
-    catPresent: true,
-    cat,
-    activity,
-    confidence: Math.round((totalConf / validCalls) * 100),
-    notes,
-    identBasis
-  };
-}
-
-function checkHealth(entry, s) {
-  const alerts = [];
-  const logs = getLogs();
-  const now = new Date();
-  const today = now.toDateString();
-
-  // Check daily count
-  const todayLogs = logs.filter(l =>
-    new Date(l.timestamp).toDateString() === today &&
-    l.cat === entry.cat && l.catPresent !== false
-  );
-  if (todayLogs.length >= s.alertMaxDaily) {
-    alerts.push({ type: 'warn', msg: `${entry.catName} 今日已如廁 ${todayLogs.length + 1} 次，次數偏多` });
-  }
-
-  // Check duration
-  if (entry.duration > s.alertMaxDuration * 60) {
-    alerts.push({ type: 'warn', msg: `單次如廁時間 ${Math.round(entry.duration/60)} 分鐘，時間過長` });
-  }
-
-  // Check last poop (if we can detect)
-  if (entry.activity === 'urinating') {
-    // Check last defecation
-    const lastPoop = logs.find(l => l.cat === entry.cat && l.activity === 'defecating');
-    if (lastPoop) {
-      const hoursSince = (now - new Date(lastPoop.timestamp)) / 3600000;
-      if (hoursSince > 48) {
-        alerts.push({ type: 'alert', msg: `${entry.catName} 超過 48 小時未有大便記錄` });
-      }
-    }
-  }
-
-  return alerts;
-}
-
-// ════════════════════════════════════════
-// PHOTO REFERENCE MANAGEMENT
-// ════════════════════════════════════════
-function handlePhotoUpload(cat, input) {
-  const file = input.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    // Resize to max 512px to save localStorage space
-    const img = new Image();
-    img.onload = () => {
-      const MAX = 512;
-      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      const base64 = canvas.toDataURL('image/jpeg', 0.75);
-      try {
-        localStorage.setItem(`catmon_photo_${cat}`, base64);
-        showPhotoPreview(cat, base64);
-        toast(`✅ ${cat === 'cat1' ? '貓貓一' : '貓貓二'} 參考相已儲存`, 'success');
-      } catch(e) {
-        toast('❌ 相片太大，請選細一啲', 'error');
-      }
+// ═══════════════════════════════════════
+// PHOTO
+// ═══════════════════════════════════════
+function handlePhotoUpload(catId,input){
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=512,scale=Math.min(1,MAX/Math.max(img.width,img.height));
+      const canvas=document.createElement('canvas');
+      canvas.width=img.width*scale; canvas.height=img.height*scale;
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      const b64=canvas.toDataURL('image/jpeg',.75);
+      try{
+        localStorage.setItem('catmon_photo_'+catId,b64);
+        const th=document.getElementById('thumb_'+catId);
+        if(th){
+          th.querySelectorAll('.pi,.pl').forEach(e=>e.style.display='none');
+          const ex=th.querySelector('img');if(ex)ex.remove();
+          const el=document.createElement('img');el.src=b64;th.appendChild(el);
+        }
+        toast(t('photoSaved'),'success');
+      }catch(e){toast(t('photoTooLarge'),'error');}
     };
-    img.src = e.target.result;
+    img.src=e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function showPhotoPreview(cat, base64) {
-  const wrap = document.getElementById(`${cat}PhotoWrap`);
-  if (!wrap) return;
-  // Remove existing img if any
-  const existing = wrap.querySelector('img');
-  if (existing) existing.remove();
-  const img = document.createElement('img');
-  img.src = base64;
-  wrap.appendChild(img);
+function getRefPhoto(catId){
+  const s=localStorage.getItem('catmon_photo_'+catId);
+  return s?s.split(',')[1]:null;
 }
 
-function getRefPhoto(cat) {
-  const stored = localStorage.getItem(`catmon_photo_${cat}`);
-  if (!stored) return null;
-  return stored.split(',')[1]; // return base64 data only
+// ═══════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════
+const SETTING_KEYS=['apiKey','apiModel','discordWebhook','tgToken','tgChatId','sensitivity','triggerDelay','sessionEndDelay','alertNoVisit','alertMaxDaily','alertMaxDuration'];
+
+function loadSettings(){
+  return {apiKey:'',apiModel:'claude-haiku-3-5-20251001',discordWebhook:'',tgToken:'',tgChatId:'',sensitivity:15,triggerDelay:3,sessionEndDelay:45,alertNoVisit:24,alertMaxDaily:8,alertMaxDuration:15,...JSON.parse(localStorage.getItem('catmon_settings')||'{}')};
+}
+function saveSettings(){
+  const s={};
+  SETTING_KEYS.forEach(k=>{const el=document.getElementById(k);if(el)s[k]=(el.type==='number'||el.type==='range')?+el.value:el.value;});
+  localStorage.setItem('catmon_settings',JSON.stringify(s));
+  toast(t('settingsSaved'),'success');
+}
+function loadSettingsToForm(){
+  const s=loadSettings();
+  SETTING_KEYS.forEach(k=>{const el=document.getElementById(k);if(el)el.value=s[k];});
+  document.getElementById('sensitivityVal').textContent=s.sensitivity+'%';
+}
+function v(id){return document.getElementById(id)?.value||'';}
+
+// ═══════════════════════════════════════
+// LOGS
+// ═══════════════════════════════════════
+function getLogs(){return JSON.parse(localStorage.getItem('catmon_logs')||'[]');}
+function saveLogs(logs){localStorage.setItem('catmon_logs',JSON.stringify(logs.slice(0,500)));}
+function addLog(entry){const logs=getLogs();logs.unshift({...entry,id:Date.now()});saveLogs(logs);renderRecentEvents();renderLog();renderStats();}
+function clearAllLogs(){if(!confirm(t('logsClearConfirm')))return;localStorage.removeItem('catmon_logs');renderRecentEvents();renderLog();renderStats();toast(t('logsCleared'));}
+function exportLogs(){const blob=new Blob([JSON.stringify(getLogs(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`catmon_${new Date().toISOString().slice(0,10)}.json`;a.click();}
+
+// ═══════════════════════════════════════
+// CAMERA & MOTION
+// ═══════════════════════════════════════
+let stream=null,motionTimer=null,sessionEndTimer=null,sessionTimerInterval=null;
+let isInSession=false,motionStartTime=null,wakeLock=null;
+let sessionStartTime=null,sessionApiCalls=[],lastAnalyzeTime=0;
+let prevFrame=null,motionCanvas=null,motionCtx=null;
+let roi=null,isDrawingROI=false,roiStart=null;
+const ANALYZE_INTERVAL_MS=18000;
+
+async function startCamera(){
+  const s=loadSettings();
+  if(!s.apiKey){toast(t('apiKeyRequired'),'error');switchTab('settings');return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+    const video=document.getElementById('videoEl');video.srcObject=stream;await video.play();
+    document.getElementById('btnStart').disabled=true;
+    document.getElementById('btnStop').disabled=false;
+    setStatusDot('active');setOverlay(t('monitoring'));
+    setupROICanvas();startMotionDetection();acquireWakeLock();
+    if(!roi){roi={x:.2,y:.2,w:.6,h:.6};drawROI();}
+  }catch(e){toast(t('camError')+': '+e.message,'error');}
 }
 
-// ════════════════════════════════════════
-// CLAUDE API
-// ════════════════════════════════════════
-async function analyzeFrame() {
-  const s = loadSettings();
-  if (!s.apiKey) return;
-
-  const video = document.getElementById('videoEl');
-  if (!video.videoWidth) return;
-
-  setCamStatus('🔵 分析中...', 'analyzing');
-
-  // Capture live frame
-  const cap = document.createElement('canvas');
-  cap.width = 640; cap.height = Math.round(640 * video.videoHeight / video.videoWidth);
-  cap.getContext('2d').drawImage(video, 0, 0, cap.width, cap.height);
-  const liveBase64 = cap.toDataURL('image/jpeg', 0.7).split(',')[1];
-
-  // Get reference photos
-  const ref1 = getRefPhoto('cat1');
-  const ref2 = getRefPhoto('cat2');
-  const hasRefs = ref1 || ref2;
-
-  // Build identification descriptions
-  function catDesc(num, name, breed, desc) {
-    let d = `Cat ${num} — Name: ${name}`;
-    if (breed) d += `, Breed: ${breed}`;
-    if (desc) d += `\nPhysical description: ${desc}`;
-    return d;
-  }
-
-  const refNote = hasRefs
-    ? `Reference photos of each cat are provided above the live image. Use them for DIRECT VISUAL COMPARISON.`
-    : `No reference photos provided. Rely on the written descriptions.`;
-
-  const prompt = `You are an AI monitoring a cat litter box. Your task is to identify which cat is present and what they are doing.
-
-CATS IN THIS HOUSEHOLD:
-${catDesc(1, s.cat1Name, s.cat1Breed, s.cat1Desc)}
-
-${catDesc(2, s.cat2Name, s.cat2Breed, s.cat2Desc)}
-
-${refNote}
-
-IDENTIFICATION STRATEGY (apply in order):
-1. Check if the litter box area is visible in the LIVE image
-2. Check if any cat is present in the litter box
-3. If cat present, compare against reference photos AND written descriptions:
-   - Body size & build (larger/smaller)
-   - Coat pattern, color, markings
-   - Facial features (ear shape, eye color, face shape)
-   - Any unique marks, spots, scars
-4. If you cannot distinguish between the two cats with reasonable confidence, set cat_identity to "unknown" — DO NOT GUESS
-
-CONFIDENCE GUIDE:
-- 0.9+: Clearly identified, distinctive features match
-- 0.7-0.89: Likely match, most features align
-- 0.5-0.69: Possible match, some uncertainty
-- <0.5: Cannot distinguish → use "unknown"
-
-HEALTH OBSERVATIONS (if cat present):
-- Posture (squatting, straining, hunched?)
-- Time spent (appears normal or prolonged?)
-- Any visible signs of discomfort?
-- Litter appearance if visible?
-
-Respond ONLY with valid JSON, no markdown:
-{
-  "litter_box_visible": true or false,
-  "cat_present": true or false,
-  "cat_identity": "cat1" or "cat2" or "unknown" or "none",
-  "identification_basis": "brief explanation of how you identified the cat, or why unknown",
-  "activity": "urinating" or "defecating" or "investigating" or "covering" or "exiting" or "none",
-  "confidence": number 0.0 to 1.0,
-  "health_notes": "any health observations, empty string if none"
-}`;
-
-  // Build message content: ref photos first, then live frame
-  const content = [];
-  if (ref1) {
-    content.push({ type: 'text', text: `📷 Reference photo of ${s.cat1Name}:` });
-    content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: ref1 } });
-  }
-  if (ref2) {
-    content.push({ type: 'text', text: `📷 Reference photo of ${s.cat2Name}:` });
-    content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: ref2 } });
-  }
-  content.push({ type: 'text', text: '🔴 LIVE IMAGE (analyze this):' });
-  content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: liveBase64 } });
-  content.push({ type: 'text', text: prompt });
-
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': s.apiKey, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: s.apiModel, max_tokens: 400, messages: [{ role: 'user', content }] })
-    });
-
-    if (!resp.ok) { console.error('API error', resp.status); return; }
-    const data = await resp.json();
-    const text = data.content?.[0]?.text || '';
-
-    try {
-      const clean = text.replace(/```json|```/g, '').trim();
-      const result = JSON.parse(clean);
-      sessionApiCalls.push(result);
-
-      // Update session card
-      const catName = result.cat_identity === 'cat1' ? s.cat1Name :
-                      result.cat_identity === 'cat2' ? s.cat2Name : '未知';
-      document.getElementById('sessionCatName').textContent =
-        result.cat_identity === 'unknown' ? '❓ 分唔清' : catName;
-      document.getElementById('sessionActivity').textContent = translateActivity(result.activity);
-      const confPct = Math.round((result.confidence || 0) * 100);
-      document.getElementById('sessionConf').textContent =
-        confPct + '%' + (result.cat_identity === 'unknown' ? ' ⚠️' : '');
-
-    } catch (e) {
-      console.error('JSON parse error', text);
-    }
-  } catch (e) {
-    console.error('API fetch error', e);
-  }
-
-  setCamStatus('🔴 進行中', 'in-session');
+function stopCamera(){
+  if(stream){stream.getTracks().forEach(tr=>tr.stop());stream=null;}
+  if(motionTimer){clearInterval(motionTimer);motionTimer=null;}
+  if(wakeLock){wakeLock.release();wakeLock=null;}
+  document.getElementById('btnStart').disabled=false;
+  document.getElementById('btnStop').disabled=true;
+  setStatusDot('');setOverlay(t('camStandby'));setCamStatus(t('camNotStarted'),'');
+  if(isInSession)endSession(true);prevFrame=null;
 }
 
-function translateActivity(act) {
-  const m = { urinating: '💧 尿尿', defecating: '💩 大便', investigating: '👀 探索', covering: '⛏ 掩蓋', exiting: '🚪 離開', none: '—' };
-  return m[act] || act || '—';
+async function acquireWakeLock(){try{if('wakeLock'in navigator)wakeLock=await navigator.wakeLock.request('screen');}catch(e){}}
+
+function startMotionDetection(){
+  motionCanvas=document.createElement('canvas');motionCanvas.width=160;motionCanvas.height=120;
+  motionCtx=motionCanvas.getContext('2d',{willReadFrequently:true});prevFrame=null;
+  motionTimer=setInterval(detectMotion,500);
 }
 
-// ════════════════════════════════════════
-// NOTIFICATIONS
-// ════════════════════════════════════════
-function buildNotifMessage(entry, alerts) {
-  const s = loadSettings();
-  const dot = entry.cat === 'cat1' ? s.cat1ColorDot : s.cat2ColorDot;
-  const actEmoji = { urinating: '💧', defecating: '💩', investigating: '👀', covering: '⛏', exiting: '🚪' };
-  const emoji = actEmoji[entry.activity] || '🐱';
-  const dur = entry.duration < 60 ? `${entry.duration}秒` : `${Math.round(entry.duration/60)}分`;
-  const time = new Date(entry.timestamp).toLocaleTimeString('zh-HK', {hour:'2-digit',minute:'2-digit'});
-
-  let msg = `${emoji} **${entry.catName}** 去咗廁所\n`;
-  msg += `🕐 ${time} ｜ ⏱ ${dur}\n`;
-  msg += `📊 活動：${translateActivity(entry.activity)}\n`;
-  if (entry.notes) msg += `📝 ${entry.notes}\n`;
-  if (alerts.length > 0) {
-    msg += '\n⚠️ **健康警告**\n';
-    alerts.forEach(a => msg += `• ${a.msg}\n`);
+function detectMotion(){
+  const video=document.getElementById('videoEl');if(!video.videoWidth)return;
+  const W=motionCanvas.width,H=motionCanvas.height;
+  motionCtx.drawImage(video,0,0,W,H);
+  const frame=motionCtx.getImageData(0,0,W,H);
+  if(!prevFrame){prevFrame=frame;return;}
+  const s=loadSettings();
+  let rx=0,ry=0,rw=W,rh=H;
+  if(roi){rx=Math.floor(roi.x*W);ry=Math.floor(roi.y*H);rw=Math.floor(roi.w*W);rh=Math.floor(roi.h*H);}
+  let diff=0,count=0;
+  for(let y=ry;y<ry+rh;y++)for(let x=rx;x<rx+rw;x++){
+    const i=(y*W+x)*4;
+    diff+=(Math.abs(frame.data[i]-prevFrame.data[i])+Math.abs(frame.data[i+1]-prevFrame.data[i+1])+Math.abs(frame.data[i+2]-prevFrame.data[i+2]))/3;
+    count++;
   }
-  return msg;
+  const pct=count>0?Math.min(100,Math.round(diff/count/2.55)):0;
+  prevFrame=frame;updateMotionMeter(pct);handleMotionState(pct>=s.sensitivity,s);
 }
 
-async function sendNotifications(entry, s, alerts) {
-  const msg = buildNotifMessage(entry, alerts);
-
-  if (s.discordWebhook) {
-    try {
-      await fetch(s.discordWebhook, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: msg, username: '🐱 貓廁監察站' })
-      });
-    } catch (e) { console.error('Discord error', e); }
-  }
-
-  if (s.tgToken && s.tgChatId) {
-    const tgMsg = msg.replace(/\*\*/g, '*');
-    try {
-      await fetch(`https://api.telegram.org/bot${s.tgToken}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: s.tgChatId, text: tgMsg, parse_mode: 'Markdown' })
-      });
-    } catch (e) { console.error('Telegram error', e); }
+function handleMotionState(hasMotion,s){
+  const now=Date.now();
+  if(hasMotion){
+    setStatusDot('motion');
+    if(!motionStartTime)motionStartTime=now;
+    if(sessionEndTimer){clearTimeout(sessionEndTimer);sessionEndTimer=null;}
+    const elapsed=(now-motionStartTime)/1000;
+    if(elapsed>=s.triggerDelay&&!isInSession)startSession();
+    if(isInSession&&(now-lastAnalyzeTime)>ANALYZE_INTERVAL_MS){analyzeFrame();lastAnalyzeTime=now;}
+  }else{
+    setStatusDot(stream?'active':'');
+    if(isInSession&&!sessionEndTimer)sessionEndTimer=setTimeout(()=>endSession(false),s.sessionEndDelay*1000);
+    if(!isInSession)motionStartTime=null;
   }
 }
 
-async function testDiscord() {
-  const url = document.getElementById('discordWebhook').value;
-  if (!url) { toast('請先填寫 Discord Webhook URL', 'error'); return; }
-  try {
-    await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: '✅ 貓廁監察站連接測試成功！🐱', username: '🐱 貓廁監察站' })
-    });
-    toast('✅ Discord 測試成功', 'success');
-  } catch (e) { toast('❌ Discord 測試失敗: ' + e.message, 'error'); }
+// ═══════════════════════════════════════
+// SESSION
+// ═══════════════════════════════════════
+function startSession(){
+  isInSession=true;sessionStartTime=new Date();sessionApiCalls=[];lastAnalyzeTime=0;
+  document.getElementById('sessionCard').classList.add('visible');
+  document.getElementById('sessionStart').textContent=formatTime(sessionStartTime);
+  document.getElementById('sessionCatName').textContent='...';
+  document.getElementById('sessionActivity').textContent='...';
+  document.getElementById('sessionConf').textContent='—';
+  sessionTimerInterval=setInterval(updateSessionDuration,1000);
+  setCamStatus(t('inSession'),'in-session');setOverlay(t('inSession'));
+  analyzeFrame();lastAnalyzeTime=Date.now();
 }
 
-async function testTelegram() {
-  const token = document.getElementById('tgToken').value;
-  const chatId = document.getElementById('tgChatId').value;
-  if (!token || !chatId) { toast('請填寫 Telegram Token 同 Chat ID', 'error'); return; }
-  try {
-    const r = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: '✅ 貓廁監察站連接測試成功！🐱' })
-    });
-    const d = await r.json();
-    if (d.ok) toast('✅ Telegram 測試成功', 'success');
-    else toast('❌ Telegram 錯誤: ' + d.description, 'error');
-  } catch (e) { toast('❌ Telegram 測試失敗: ' + e.message, 'error'); }
+function updateSessionDuration(){
+  if(!sessionStartTime)return;
+  const sec=Math.round((Date.now()-sessionStartTime)/1000),m=Math.floor(sec/60),s2=sec%60;
+  document.getElementById('sessionDur').textContent=m>0?`${m}${t('dm')} ${s2}${t('ds')}`:`${s2}${t('ds')}`;
 }
 
-// ════════════════════════════════════════
-// ROI CANVAS
-// ════════════════════════════════════════
-function setupROICanvas() {
-  const canvas = document.getElementById('roiCanvas');
-  const video = document.getElementById('videoEl');
-
-  canvas.width = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
-
-  canvas.addEventListener('touchstart', onROIStart, { passive: false });
-  canvas.addEventListener('touchmove', onROIMove, { passive: false });
-  canvas.addEventListener('touchend', onROIEnd);
-  canvas.addEventListener('mousedown', onROIStart);
-  canvas.addEventListener('mousemove', onROIMove);
-  canvas.addEventListener('mouseup', onROIEnd);
+async function endSession(aborted){
+  isInSession=false;
+  if(sessionTimerInterval){clearInterval(sessionTimerInterval);sessionTimerInterval=null;}
+  if(sessionEndTimer){clearTimeout(sessionEndTimer);sessionEndTimer=null;}
+  motionStartTime=null;
+  document.getElementById('sessionCard').classList.remove('visible');
+  setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
+  if(aborted||!sessionApiCalls.length)return;
+  if((Date.now()-lastAnalyzeTime)>5000)await analyzeFrame();
+  const duration=Math.round((Date.now()-sessionStartTime)/1000);
+  const result=aggregateSession(sessionApiCalls);
+  if(!result.catPresent)return;
+  const s=loadSettings();
+  const entry={timestamp:sessionStartTime.toISOString(),endTimestamp:new Date().toISOString(),duration,cat:result.cat,catName:getCatName(result.cat),activity:result.activity,confidence:result.confidence,notes:result.notes,identBasis:result.identBasis,alerts:[]};
+  entry.alerts=checkHealth(entry,s);
+  addLog(entry);await sendNotifications(entry,s,entry.alerts);
 }
 
-function getPos(e, canvas) {
-  const r = canvas.getBoundingClientRect();
-  const touch = e.touches ? e.touches[0] : e;
-  return { x: (touch.clientX - r.left) / r.width, y: (touch.clientY - r.top) / r.height };
-}
-
-function onROIStart(e) {
-  e.preventDefault();
-  const canvas = document.getElementById('roiCanvas');
-  roiStart = getPos(e, canvas);
-  isDrawingROI = true;
-}
-
-function onROIMove(e) {
-  e.preventDefault();
-  if (!isDrawingROI) return;
-  const canvas = document.getElementById('roiCanvas');
-  const pos = getPos(e, canvas);
-  roi = {
-    x: Math.min(roiStart.x, pos.x),
-    y: Math.min(roiStart.y, pos.y),
-    w: Math.abs(pos.x - roiStart.x),
-    h: Math.abs(pos.y - roiStart.y)
-  };
-  drawROI();
-}
-
-function onROIEnd(e) {
-  isDrawingROI = false;
-  if (roi && roi.w < 0.05) { roi = null; drawROI(); }
-}
-
-function drawROI() {
-  const canvas = document.getElementById('roiCanvas');
-  const ctx = canvas.getContext('2d');
-  canvas.width = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (!roi) return;
-  const W = canvas.width, H = canvas.height;
-  ctx.strokeStyle = '#00e5b0';
-  ctx.lineWidth = 2;
-  ctx.setLineDash([6, 3]);
-  ctx.strokeRect(roi.x * W, roi.y * H, roi.w * W, roi.h * H);
-  ctx.fillStyle = 'rgba(0,229,176,0.08)';
-  ctx.fillRect(roi.x * W, roi.y * H, roi.w * W, roi.h * H);
-  ctx.setLineDash([]);
-  ctx.fillStyle = '#00e5b0';
-  ctx.font = '10px Space Mono, monospace';
-  ctx.fillText('貓砂盤區域', roi.x * W + 4, roi.y * H + 14);
-}
-
-// ════════════════════════════════════════
-// RENDER FUNCTIONS
-// ════════════════════════════════════════
-function renderRecentEvents() {
-  const logs = getLogs().slice(0, 5);
-  const el = document.getElementById('recentEvents');
-  if (logs.length === 0) { el.innerHTML = '<div class="no-events">尚無記錄</div>'; return; }
-  const s = loadSettings();
-  el.innerHTML = logs.map(l => renderEventItem(l, s)).join('');
-}
-
-function renderEventItem(l, s) {
-  const color = l.cat === 'cat1' ? s.cat1ColorDot : l.cat === 'cat2' ? s.cat2ColorDot : '#5a7a96';
-  const badgeClass = l.activity === 'urinating' ? 'pee' : l.activity === 'defecating' ? 'poop' : 'visit';
-  const time = formatTime(new Date(l.timestamp));
-  const dur = l.duration < 60 ? l.duration + 's' : Math.round(l.duration/60) + 'm';
-  const alertStr = l.alerts?.length > 0 ? `<span class="badge alert">⚠️ 警告</span>` : '';
-  return `<div class="event-item">
-    <div class="event-cat-dot" style="background:${color}"></div>
-    <div class="event-body">
-      <div class="event-title">${l.catName} · ${translateActivity(l.activity)}</div>
-      <div class="event-sub">${dur} · 信心 ${l.confidence}%</div>
-    </div>
-    ${alertStr}
-    <span class="badge ${badgeClass}">${l.activity === 'urinating' ? '尿' : l.activity === 'defecating' ? '便' : '探'}</span>
-    <div class="event-time">${time}</div>
-  </div>`;
-}
-
-function setFilter(f, btn) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderLog();
-}
-
-function renderLog() {
-  const s = loadSettings();
-  let logs = getLogs();
-
-  if (currentFilter === 'cat1') logs = logs.filter(l => l.cat === 'cat1');
-  else if (currentFilter === 'cat2') logs = logs.filter(l => l.cat === 'cat2');
-  else if (currentFilter === 'pee') logs = logs.filter(l => l.activity === 'urinating');
-  else if (currentFilter === 'poop') logs = logs.filter(l => l.activity === 'defecating');
-  else if (currentFilter === 'alert') logs = logs.filter(l => l.alerts?.length > 0);
-
-  const el = document.getElementById('logContainer');
-  if (logs.length === 0) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>無記錄</div>';
-    return;
-  }
-
-  // Group by date
-  const groups = {};
-  logs.forEach(l => {
-    const d = new Date(l.timestamp).toLocaleDateString('zh-HK', {year:'numeric',month:'long',day:'numeric'});
-    if (!groups[d]) groups[d] = [];
-    groups[d].push(l);
+function aggregateSession(calls){
+  if(!calls.length)return{catPresent:false};
+  const catC={},actC={};let notes='',identBasis='',totalConf=0,valid=0;
+  calls.forEach(c=>{
+    if(!c||!c.cat_present)return;valid++;
+    const cat=c.cat_identity||'unknown';catC[cat]=(catC[cat]||0)+1;
+    const act=c.activity||'none';actC[act]=(actC[act]||0)+1;
+    if(c.health_notes)notes=c.health_notes;
+    if(c.identification_basis)identBasis=c.identification_basis;
+    totalConf+=c.confidence||0.5;
   });
-
-  el.innerHTML = Object.entries(groups).map(([date, entries]) => `
-    <div class="log-date-group">
-      <div class="log-date-label">${date}</div>
-      ${entries.map(l => renderLogEntry(l, s)).join('')}
-    </div>
-  `).join('');
+  if(!valid)return{catPresent:false};
+  const cat=Object.keys(catC).sort((a,b)=>catC[b]-catC[a])[0];
+  const activity=Object.keys(actC).sort((a,b)=>actC[b]-actC[a])[0];
+  return{catPresent:true,cat,activity,confidence:Math.round((totalConf/valid)*100),notes,identBasis};
 }
 
-function renderLogEntry(l, s) {
-  const color = l.cat === 'cat1' ? s.cat1ColorDot : l.cat === 'cat2' ? s.cat2ColorDot : '#5a7a96';
-  const time = new Date(l.timestamp).toLocaleTimeString('zh-HK', {hour:'2-digit',minute:'2-digit'});
-  const dur = l.duration < 60 ? l.duration + '秒' : Math.round(l.duration/60) + '分鐘';
-  const alertHtml = l.alerts?.length ? l.alerts.map(a =>
-    `<div class="alert-card ${a.type === 'warn' ? 'warn' : ''}" style="margin-top:6px;padding:8px">
-      <div class="alert-title">${a.type === 'warn' ? '⚠️' : '🚨'} 健康警告</div>
-      <div class="alert-body">${a.msg}</div>
-    </div>`).join('') : '';
-
-  return `<div class="log-entry">
-    <div class="log-entry-header">
-      <div class="event-cat-dot" style="background:${color}"></div>
-      <strong style="font-size:13px;color:var(--text-bright)">${l.catName}</strong>
-      <span class="badge ${l.activity === 'urinating' ? 'pee' : l.activity === 'defecating' ? 'poop' : 'visit'}">${translateActivity(l.activity)}</span>
-      <span style="margin-left:auto;font-size:11px;color:var(--text-dim)">${time}</span>
-    </div>
-    ${l.notes ? `<div class="log-entry-notes">「${l.notes}」</div>` : ''}
-    ${l.identBasis ? `<div class="log-entry-notes" style="color:var(--teal-dim)">🔍 ${l.identBasis}</div>` : ''}
-    <div class="log-entry-meta">
-      <span>⏱ ${dur}</span>
-      <span>🎯 ${l.confidence}%</span>
-    </div>
-    ${alertHtml}
-  </div>`;
-}
-
-function renderStats() {
-  const s = loadSettings();
-  const logs = getLogs().filter(l => l.cat !== undefined);
-  const el = document.getElementById('statsContainer');
-
-  if (logs.length === 0) {
-    el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>收集到記錄後會顯示統計</div>';
-    return;
-  }
-
-  const now = new Date();
-  const today = now.toDateString();
-  const weekAgo = new Date(now - 7*24*3600000);
-
-  function catStats(cat, name, color) {
-    const catLogs = logs.filter(l => l.cat === cat);
-    const todayLogs = catLogs.filter(l => new Date(l.timestamp).toDateString() === today);
-    const weekLogs = catLogs.filter(l => new Date(l.timestamp) >= weekAgo);
-    const lastVisit = catLogs[0];
-    const peeCount = weekLogs.filter(l => l.activity === 'urinating').length;
-    const poopCount = weekLogs.filter(l => l.activity === 'defecating').length;
-    const avgDur = weekLogs.length ? Math.round(weekLogs.reduce((a,l)=>a+l.duration,0)/weekLogs.length) : 0;
-    const lastStr = lastVisit ? relativeTime(new Date(lastVisit.timestamp)) : '無記錄';
-
-    return `<div class="cat-panel">
-      <div class="cat-header">
-        <div class="cat-avatar" style="background:${color}22;border:2px solid ${color}">🐱</div>
-        <div>
-          <div class="cat-name">${name}</div>
-          <div style="font-size:10px;color:var(--text-dim)">上次：${lastStr}</div>
-        </div>
-      </div>
-      <div class="cat-stats">
-        <div class="mini-stat"><div class="val">${todayLogs.length}</div><div class="lbl">今日次數</div></div>
-        <div class="mini-stat"><div class="val" style="color:var(--blue)">${peeCount}</div><div class="lbl">本週尿尿</div></div>
-        <div class="mini-stat"><div class="val" style="color:var(--amber)">${poopCount}</div><div class="lbl">本週大便</div></div>
-      </div>
-      <div style="margin-top:8px;font-size:10px;color:var(--text-dim)">平均每次 ${avgDur}秒 ｜ 本週 ${weekLogs.length} 次</div>
-    </div>`;
-  }
-
-  // Alerts
-  const alerts = generateHealthAlerts(logs, s);
-  const alertHtml = alerts.map(a => `
-    <div class="alert-card ${a.type === 'warn' ? 'warn' : ''}">
-      <div class="alert-title">${a.type === 'warn' ? '⚠️ 注意' : '🚨 警告'}</div>
-      <div class="alert-body">${a.msg}</div>
-    </div>`).join('');
-
-  // Timeline for today
-  const timelineHtml = renderTimeline(logs, s, today);
-
-  const totalWeek = logs.filter(l => new Date(l.timestamp) >= weekAgo).length;
-
-  el.innerHTML = `
-    ${alertHtml}
-    ${catStats('cat1', s.cat1Name, s.cat1ColorDot)}
-    ${catStats('cat2', s.cat2Name, s.cat2ColorDot)}
-    <div class="section-title">今日時間軸</div>
-    ${timelineHtml}
-    <div class="stats-grid" style="margin-top:8px">
-      <div class="stat-card"><div class="stat-val">${totalWeek}</div><div class="stat-label">本週總記錄</div></div>
-      <div class="stat-card"><div class="stat-val">${logs.length}</div><div class="stat-label">全部記錄</div></div>
-    </div>
-  `;
-}
-
-function renderTimeline(logs, s, today) {
-  const todayLogs = logs.filter(l => new Date(l.timestamp).toDateString() === today);
-  const cat1Today = todayLogs.filter(l => l.cat === 'cat1');
-  const cat2Today = todayLogs.filter(l => l.cat === 'cat2');
-
-  function eventBars(catLogs, color) {
-    return catLogs.map(l => {
-      const d = new Date(l.timestamp);
-      const pct = (d.getHours() * 60 + d.getMinutes()) / (24 * 60) * 100;
-      const durPct = Math.max(0.5, (l.duration / 86400) * 100);
-      const c = l.activity === 'urinating' ? '#4dd0e1' : l.activity === 'defecating' ? '#ffb74d' : color;
-      return `<div class="timeline-event" style="left:${pct}%;width:${durPct}%;background:${c};opacity:0.85"></div>`;
-    }).join('');
-  }
-
-  return `<div class="timeline-wrap">
-    <div class="timeline-hours">
-      ${['0','6','12','18','24'].map(h=>`<span>${h}</span>`).join('')}
-    </div>
-    <div class="timeline-row">
-      <div class="timeline-cat-label">${s.cat1Name}</div>
-      <div class="timeline-bar">${eventBars(cat1Today, s.cat1ColorDot)}</div>
-    </div>
-    <div class="timeline-row">
-      <div class="timeline-cat-label">${s.cat2Name}</div>
-      <div class="timeline-bar">${eventBars(cat2Today, s.cat2ColorDot)}</div>
-    </div>
-    <div style="display:flex;gap:12px;margin-top:6px;font-size:9px;color:var(--text-dim)">
-      <span style="color:#4dd0e1">■ 尿尿</span>
-      <span style="color:#ffb74d">■ 大便</span>
-    </div>
-  </div>`;
-}
-
-function generateHealthAlerts(logs, s) {
-  const alerts = [];
-  const now = new Date();
-
-  ['cat1', 'cat2'].forEach(cat => {
-    const name = cat === 'cat1' ? s.cat1Name : s.cat2Name;
-    const catLogs = logs.filter(l => l.cat === cat);
-    if (catLogs.length === 0) return;
-
-    const last = new Date(catLogs[0].timestamp);
-    const hoursSince = (now - last) / 3600000;
-
-    if (s.alertNoVisit > 0 && hoursSince > s.alertNoVisit) {
-      alerts.push({ type: 'alert', msg: `${name} 超過 ${Math.round(hoursSince)} 小時未有如廁記錄` });
-    }
-
-    const today = now.toDateString();
-    const todayCount = catLogs.filter(l => new Date(l.timestamp).toDateString() === today).length;
-    if (todayCount >= s.alertMaxDaily) {
-      alerts.push({ type: 'warn', msg: `${name} 今日已如廁 ${todayCount} 次，次數偏多` });
-    }
-  });
-
+function checkHealth(entry,s){
+  const alerts=[],logs=getLogs(),now=new Date(),today=now.toDateString();
+  const tl=logs.filter(l=>new Date(l.timestamp).toDateString()===today&&l.cat===entry.cat);
+  if(tl.length>=s.alertMaxDaily)alerts.push({type:'warn',msg:`${entry.catName} ${lang==='zh'?'今日已如廁':'has visited '}${tl.length+1}${t('timesToday')}`});
+  if(entry.duration>s.alertMaxDuration*60)alerts.push({type:'warn',msg:`${lang==='zh'?'單次如廁時間 ':'Session '}${Math.round(entry.duration/60)}${t('dm')}${t('tooLong')}`});
+  const lp=logs.find(l=>l.cat===entry.cat&&l.activity==='defecating');
+  if(lp&&(now-new Date(lp.timestamp))/3600000>48)alerts.push({type:'alert',msg:`${entry.catName} ${t('noPoopSuffix')}`});
   return alerts;
 }
 
-// ════════════════════════════════════════
+// ═══════════════════════════════════════
+// CLAUDE API
+// ═══════════════════════════════════════
+async function analyzeFrame(){
+  const s=loadSettings();if(!s.apiKey)return;
+  const video=document.getElementById('videoEl');if(!video.videoWidth)return;
+  setCamStatus(t('analyzing'),'analyzing');
+  const cap=document.createElement('canvas');cap.width=640;cap.height=Math.round(640*video.videoHeight/video.videoWidth);
+  cap.getContext('2d').drawImage(video,0,0,cap.width,cap.height);
+  const liveB64=cap.toDataURL('image/jpeg',.7).split(',')[1];
+  const cats=getCats();
+  const catDesc=cats.map((c,i)=>{
+    let d=`Cat ${i+1} — ID: ${c.id}, Name: ${c.name||'(unnamed)'}`;
+    if(c.breed&&c.breed!==BREEDS.zh[0])d+=`, Breed: ${c.breed}`;
+    if(c.desc)d+=`\nUnique features: ${c.desc}`;
+    return d;
+  }).join('\n\n');
+  const catIds=cats.map(c=>`"${c.id}"`).join(' or ');
+  const content=[];
+  for(const c of cats){const ref=getRefPhoto(c.id);if(ref){content.push({type:'text',text:`Reference photo of ${c.name||c.id}:`});content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:ref}});}}
+  const hasRefs=cats.some(c=>getRefPhoto(c.id));
+  const prompt=`You are monitoring a cat litter box. Identify which cat is present.
+
+CATS:
+${catDesc}
+
+${hasRefs?'Reference photos provided above. Use for direct visual comparison.':'No reference photos — use written descriptions only.'}
+
+STEPS:
+1. Is litter box visible in the LIVE IMAGE?
+2. Is any cat present?
+3. If yes: compare against references + descriptions (size, coat, markings, face, ears, unique features)
+4. If confidence < 0.5, set cat_identity to "unknown". DO NOT GUESS.
+
+Confidence: 0.9+ clearly identified | 0.7-0.89 likely | 0.5-0.69 possible | <0.5 → unknown
+
+Respond ONLY with valid JSON:
+{"litter_box_visible":bool,"cat_present":bool,"cat_identity":${catIds} or "unknown" or "none","identification_basis":"brief explanation","activity":"urinating" or "defecating" or "investigating" or "covering" or "exiting" or "none","confidence":0.0-1.0,"health_notes":"observations or empty string"}`;
+  content.push({type:'text',text:'LIVE IMAGE:'});
+  content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:liveB64}});
+  content.push({type:'text',text:prompt});
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':s.apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:s.apiModel,max_tokens:400,messages:[{role:'user',content}]})});
+    if(!resp.ok)return;
+    const data=await resp.json();const text=data.content?.[0]?.text||'';
+    try{
+      const result=JSON.parse(text.replace(/```json|```/g,'').trim());
+      sessionApiCalls.push(result);
+      const unk=result.cat_identity==='unknown'||result.cat_identity==='none';
+      document.getElementById('sessionCatName').textContent=unk?t('actUnknown'):getCatName(result.cat_identity);
+      document.getElementById('sessionActivity').textContent=translateActivity(result.activity);
+      document.getElementById('sessionConf').textContent=Math.round((result.confidence||0)*100)+'%'+(unk?' ⚠️':'');
+    }catch(e){console.error('parse error',text);}
+  }catch(e){console.error('api error',e);}
+  setCamStatus(t('inSession'),'in-session');
+}
+
+function translateActivity(act){
+  const m={urinating:t('actPee'),defecating:t('actPoop'),investigating:t('actInvestigate'),covering:t('actCover'),exiting:t('actExit'),none:t('actNone')};
+  return m[act]||t('actNone');
+}
+
+// ═══════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════
+function buildMsg(entry,alerts){
+  const eMap={urinating:'💧',defecating:'💩',investigating:'👀',covering:'⛏',exiting:'🚪'};
+  const emoji=eMap[entry.activity]||'🐱';
+  const dur=entry.duration<60?entry.duration+t('ds'):Math.round(entry.duration/60)+t('dm');
+  const time=new Date(entry.timestamp).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
+  let msg=`${emoji} **${entry.catName}** ${t('sessionFor')}\n🕐 ${time} ｜ ⏱ ${dur}\n${translateActivity(entry.activity)}\n`;
+  if(entry.notes)msg+=`📝 ${entry.notes}\n`;
+  if(alerts.length){msg+=`\n⚠️ **${t('healthAlerts')}**\n`;alerts.forEach(a=>msg+=`• ${a.msg}\n`);}
+  return msg;
+}
+
+async function sendNotifications(entry,s,alerts){
+  const msg=buildMsg(entry,alerts);
+  if(s.discordWebhook){try{await fetch(s.discordWebhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:msg,username:'🐱 Cat Monitor'})});}catch(e){}}
+  if(s.tgToken&&s.tgChatId){try{await fetch(`https://api.telegram.org/bot${s.tgToken}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:s.tgChatId,text:msg.replace(/\*\*/g,'*'),parse_mode:'Markdown'})});}catch(e){}}
+}
+
+async function testDiscord(){const url=v('discordWebhook');if(!url){toast(t('discordFillAll'),'error');return;}try{await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'✅ Cat Monitor test OK 🐱',username:'🐱 Cat Monitor'})});toast(t('discordOK'),'success');}catch(e){toast(t('discordFail'),'error');}}
+async function testTelegram(){const token=v('tgToken'),chatId=v('tgChatId');if(!token||!chatId){toast(t('tgFillAll'),'error');return;}try{const r=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text:'✅ Cat Monitor test OK 🐱'})});const d=await r.json();d.ok?toast(t('tgOK'),'success'):toast(t('tgFail')+': '+d.description,'error');}catch(e){toast(t('tgFail'),'error');}}
+
+// ═══════════════════════════════════════
+// ROI
+// ═══════════════════════════════════════
+function setupROICanvas(){
+  const c=document.getElementById('roiCanvas');c.width=c.offsetWidth;c.height=c.offsetHeight;
+  ['touchstart','mousedown'].forEach(ev=>c.addEventListener(ev,onROIStart,{passive:false}));
+  ['touchmove','mousemove'].forEach(ev=>c.addEventListener(ev,onROIMove,{passive:false}));
+  ['touchend','mouseup'].forEach(ev=>c.addEventListener(ev,onROIEnd));
+}
+function getPos(e,c){const r=c.getBoundingClientRect(),tp=e.touches?e.touches[0]:e;return{x:(tp.clientX-r.left)/r.width,y:(tp.clientY-r.top)/r.height};}
+function onROIStart(e){e.preventDefault();roiStart=getPos(e,document.getElementById('roiCanvas'));isDrawingROI=true;}
+function onROIMove(e){e.preventDefault();if(!isDrawingROI)return;const c=document.getElementById('roiCanvas'),p=getPos(e,c);roi={x:Math.min(roiStart.x,p.x),y:Math.min(roiStart.y,p.y),w:Math.abs(p.x-roiStart.x),h:Math.abs(p.y-roiStart.y)};drawROI();}
+function onROIEnd(){isDrawingROI=false;if(roi&&roi.w<.05){roi=null;drawROI();}}
+function drawROI(){
+  const c=document.getElementById('roiCanvas'),ctx=c.getContext('2d');
+  c.width=c.offsetWidth;c.height=c.offsetHeight;ctx.clearRect(0,0,c.width,c.height);
+  if(!roi)return;
+  const W=c.width,H=c.height;
+  ctx.strokeStyle='#00e5b0';ctx.lineWidth=2;ctx.setLineDash([6,3]);
+  ctx.strokeRect(roi.x*W,roi.y*H,roi.w*W,roi.h*H);
+  ctx.fillStyle='rgba(0,229,176,.08)';ctx.fillRect(roi.x*W,roi.y*H,roi.w*W,roi.h*H);
+  ctx.setLineDash([]);ctx.fillStyle='#00e5b0';ctx.font='10px Space Mono,monospace';
+  ctx.fillText(lang==='zh'?'貓砂盤區域':'Litter Box',roi.x*W+4,roi.y*H+14);
+}
+
+// ═══════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════
+let currentFilter='all';
+
+function renderLogFilter(){
+  const cats=getCats();
+  document.getElementById('logFilterRow').innerHTML=
+    `<button class="filter-btn ${currentFilter==='all'?'active':''}" onclick="setFilter('all',this)">${t('filterAll')}</button>`
+    +cats.map(c=>`<button class="filter-btn ${currentFilter===c.id?'active':''}" onclick="setFilter('${c.id}',this)" ${currentFilter===c.id?`style="border-color:${c.colorDot};color:${c.colorDot};background:${c.colorDot}22"`:''}><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${c.colorDot};margin-right:4px;vertical-align:middle"></span>${c.name||'?'}</button>`).join('')
+    +`<button class="filter-btn ${currentFilter==='pee'?'active':''}" onclick="setFilter('pee',this)">${t('filterPee')}</button>`
+    +`<button class="filter-btn ${currentFilter==='poop'?'active':''}" onclick="setFilter('poop',this)">${t('filterPoop')}</button>`
+    +`<button class="filter-btn ${currentFilter==='alert'?'active':''}" onclick="setFilter('alert',this)">${t('filterAlert')}</button>`;
+}
+
+function setFilter(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>{b.classList.remove('active');b.style.cssText='';});
+  btn.classList.add('active');
+  const cat=getCats().find(c=>c.id===f);
+  if(cat){btn.style.borderColor=cat.colorDot;btn.style.color=cat.colorDot;btn.style.background=cat.colorDot+'22';}
+  renderLog();
+}
+
+function renderRecentEvents(){
+  const logs=getLogs().slice(0,5),el=document.getElementById('recentEvents');
+  if(!logs.length){el.innerHTML=`<div class="no-events">${t('noRecordsMsg')}</div>`;return;}
+  el.innerHTML=logs.map(l=>eventItemHTML(l)).join('');
+}
+
+function eventItemHTML(l){
+  const color=getCatColor(l.cat);
+  const bc=l.activity==='urinating'?'pee':l.activity==='defecating'?'poop':'visit';
+  const dur=l.duration<60?l.duration+t('ds'):Math.round(l.duration/60)+t('dm');
+  return `<div class="event-item">
+    <div class="cat-dot" style="background:${color}"></div>
+    <div class="event-body">
+      <div class="event-title">${l.catName} · ${translateActivity(l.activity)}</div>
+      <div class="event-sub">${dur} · ${t('confidenceLabel')} ${l.confidence}%</div>
+    </div>
+    ${l.alerts?.length?'<span class="badge alert">⚠️</span>':''}
+    <span class="badge ${bc}">${l.activity==='urinating'?t('filterPee'):l.activity==='defecating'?t('filterPoop'):'?'}</span>
+    <div class="event-time">${formatTime(new Date(l.timestamp))}</div>
+  </div>`;
+}
+
+function renderLog(){
+  let logs=getLogs();
+  if(currentFilter!=='all'&&currentFilter!=='pee'&&currentFilter!=='poop'&&currentFilter!=='alert'){
+    logs=logs.filter(l=>l.cat===currentFilter);
+  }else if(currentFilter==='pee')logs=logs.filter(l=>l.activity==='urinating');
+  else if(currentFilter==='poop')logs=logs.filter(l=>l.activity==='defecating');
+  else if(currentFilter==='alert')logs=logs.filter(l=>l.alerts?.length>0);
+  const el=document.getElementById('logContainer');
+  if(!logs.length){el.innerHTML=`<div class="empty"><div class="empty-icon">📋</div>${t('logEmptyMsg')}</div>`;return;}
+  const groups={};
+  logs.forEach(l=>{const d=new Date(l.timestamp).toLocaleDateString(lang==='zh'?'zh-HK':'en-GB',{year:'numeric',month:'long',day:'numeric'});if(!groups[d])groups[d]=[];groups[d].push(l);});
+  el.innerHTML=Object.entries(groups).map(([date,entries])=>`<div class="log-date-group"><div class="log-date-label">${date}</div>${entries.map(l=>logEntryHTML(l)).join('')}</div>`).join('');
+}
+
+function logEntryHTML(l){
+  const color=getCatColor(l.cat);
+  const time=new Date(l.timestamp).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
+  const dur=l.duration<60?l.duration+t('ds'):Math.round(l.duration/60)+t('dm');
+  const bc=l.activity==='urinating'?'pee':l.activity==='defecating'?'poop':'visit';
+  const alertHTML=l.alerts?.length?l.alerts.map(a=>`<div class="alert-card ${a.type==='warn'?'warn':''}"><div class="alert-title">${a.type==='warn'?t('warnLabel'):t('alertLabel')}</div><div class="alert-body">${a.msg}</div></div>`).join(''):'';
+  return `<div class="log-entry">
+    <div class="log-entry-header">
+      <div class="cat-dot" style="background:${color}"></div>
+      <strong style="font-size:13px;color:var(--text-bright)">${l.catName}</strong>
+      <span class="badge ${bc}">${translateActivity(l.activity)}</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--text-dim)">${time}</span>
+    </div>
+    ${l.notes?`<div class="log-entry-notes">「${l.notes}」</div>`:''}
+    ${l.identBasis?`<div class="log-ident">${t('identBasisPfx')} ${l.identBasis}</div>`:''}
+    <div class="log-entry-meta"><span>⏱ ${dur}</span><span>🎯 ${l.confidence}%</span></div>
+    ${alertHTML}
+  </div>`;
+}
+
+function renderStats(){
+  const el=document.getElementById('statsContainer'),logs=getLogs(),cats=getCats();
+  if(!logs.length){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div>${t('statsEmptyMsg')}</div>`;return;}
+  const now=new Date(),today=now.toDateString(),weekAgo=new Date(now-7*86400000);
+  const s=loadSettings();
+  const healthAlerts=generateHealthAlerts(logs,s);
+  const alertHTML=healthAlerts.map(a=>`<div class="alert-card ${a.type==='warn'?'warn':''}"><div class="alert-title">${a.type==='warn'?t('warnLabel'):t('alertLabel')}</div><div class="alert-body">${a.msg}</div></div>`).join('');
+  const catPanels=cats.map(cat=>{
+    const cl=logs.filter(l=>l.cat===cat.id);
+    const tl=cl.filter(l=>new Date(l.timestamp).toDateString()===today);
+    const wl=cl.filter(l=>new Date(l.timestamp)>=weekAgo);
+    const pee=wl.filter(l=>l.activity==='urinating').length;
+    const poop=wl.filter(l=>l.activity==='defecating').length;
+    const avgDur=wl.length?Math.round(wl.reduce((a,l)=>a+l.duration,0)/wl.length):0;
+    const last=cl[0]?relativeTime(new Date(cl[0].timestamp)):t('noLog');
+    return `<div class="cat-panel">
+      <div class="cat-panel-header">
+        <div class="cat-avatar" style="background:${cat.colorDot}22;border:2px solid ${cat.colorDot}">🐱</div>
+        <div><div class="cat-panel-name">${cat.name||'?'}</div><div style="font-size:10px;color:var(--text-dim)">${t('lastVisit')}${last}</div></div>
+      </div>
+      <div class="cat-stats">
+        <div class="mini-stat"><div class="val">${tl.length}</div><div class="lbl">${t('todayCount')}</div></div>
+        <div class="mini-stat"><div class="val" style="color:var(--blue)">${pee}</div><div class="lbl">${t('weekPee')}</div></div>
+        <div class="mini-stat"><div class="val" style="color:var(--amber)">${poop}</div><div class="lbl">${t('weekPoop')}</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:var(--text-dim)">${t('avgPerSession')} ${avgDur}${t('ds')} ｜ ${t('weekVisits')} ${wl.length}</div>
+    </div>`;
+  }).join('');
+  const timelineRows=cats.map(cat=>{
+    const tl=logs.filter(l=>l.cat===cat.id&&new Date(l.timestamp).toDateString()===today);
+    const evts=tl.map(l=>{
+      const d=new Date(l.timestamp),pct=(d.getHours()*60+d.getMinutes())/(24*60)*100,dp=Math.max(.5,(l.duration/86400)*100);
+      const c=l.activity==='urinating'?'#4dd0e1':l.activity==='defecating'?'#ffb74d':cat.colorDot;
+      return `<div class="timeline-event" style="left:${pct}%;width:${dp}%;background:${c};opacity:.85"></div>`;
+    }).join('');
+    return `<div class="timeline-row"><div class="timeline-cat-label">${cat.name||'?'}</div><div class="timeline-bar">${evts}</div></div>`;
+  }).join('');
+  const weekTotal=logs.filter(l=>new Date(l.timestamp)>=weekAgo).length;
+  el.innerHTML=`${alertHTML}${catPanels}
+    <div class="section-title">${t('todayTimeline')}</div>
+    <div class="timeline-wrap">
+      <div class="timeline-hours">${['0','6','12','18','24'].map(h=>`<span>${h}</span>`).join('')}</div>
+      ${timelineRows}
+      <div style="display:flex;gap:12px;margin-top:5px;font-size:9px;color:var(--text-dim)"><span style="color:#4dd0e1">${t('peeLabel')}</span><span style="color:#ffb74d">${t('poopLabel')}</span></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">${weekTotal}</div><div class="stat-label">${t('weekTotal')}</div></div>
+      <div class="stat-card"><div class="stat-val">${logs.length}</div><div class="stat-label">${t('allTotal')}</div></div>
+    </div>`;
+}
+
+function generateHealthAlerts(logs,s){
+  const alerts=[],now=new Date();
+  getCats().forEach(cat=>{
+    const cl=logs.filter(l=>l.cat===cat.id);if(!cl.length)return;
+    const hrs=(now-new Date(cl[0].timestamp))/3600000;
+    if(s.alertNoVisit>0&&hrs>s.alertNoVisit)alerts.push({type:'alert',msg:`${cat.name||'?'} ${lang==='zh'?'超過 ':''}${Math.round(hrs)}${t('hrAgo')}${t('hrAgoSuffix')}`});
+    const tc=cl.filter(l=>new Date(l.timestamp).toDateString()===now.toDateString()).length;
+    if(tc>=s.alertMaxDaily)alerts.push({type:'warn',msg:`${cat.name||'?'} ${lang==='zh'?'今日已如廁 ':''}${tc}${t('timesToday')}`});
+  });
+  return alerts;
+}
+
+// ═══════════════════════════════════════
 // UI HELPERS
-// ════════════════════════════════════════
-function switchTab(tab) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + tab).classList.add('active');
-  document.getElementById('tab-' + tab).classList.add('active');
-
-  if (tab === 'log') renderLog();
-  if (tab === 'stats') renderStats();
+// ═══════════════════════════════════════
+function switchTab(tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='log'){renderLogFilter();renderLog();}
+  if(tab==='stats')renderStats();
 }
-
-function setStatusDot(state) {
-  const dot = document.getElementById('statusDot');
-  dot.className = 'status-dot' + (state ? ' ' + state : '');
-}
-
-function setOverlay(text) {
-  document.getElementById('camOverlay').textContent = text;
-}
-
-function setCamStatus(text, cls) {
-  const el = document.getElementById('camStatus');
-  el.textContent = text;
-  el.className = 'cam-status' + (cls ? ' ' + cls : '');
-}
-
-function updateMotionMeter(pct) {
-  const fill = document.getElementById('motionFill');
-  const label = document.getElementById('motionVal');
-  fill.style.width = pct + '%';
-  fill.className = 'meter-fill' + (pct > 60 ? ' fire' : pct > 30 ? ' hot' : '');
-  label.textContent = pct + '%';
-}
-
-function formatTime(d) {
-  return d.toLocaleTimeString('zh-HK', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-}
-
-function relativeTime(d) {
-  const secs = Math.round((Date.now() - d) / 1000);
-  if (secs < 60) return `${secs}秒前`;
-  if (secs < 3600) return `${Math.round(secs/60)}分前`;
-  if (secs < 86400) return `${Math.round(secs/3600)}小時前`;
-  return `${Math.round(secs/86400)}日前`;
-}
+function setStatusDot(state){const d=document.getElementById('statusDot');d.className='status-dot'+(state?' '+state:'');}
+function setOverlay(txt){document.getElementById('camOverlay').textContent=txt;}
+function setCamStatus(txt,cls){const e=document.getElementById('camStatus');e.textContent=txt;e.className='cam-status'+(cls?' '+cls:'');}
+function updateMotionMeter(pct){const f=document.getElementById('motionFill');f.style.width=pct+'%';f.className='meter-fill'+(pct>60?' fire':pct>30?' hot':'');document.getElementById('motionVal').textContent=pct+'%';}
+function formatTime(d){return d.toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+function relativeTime(d){const s=Math.round((Date.now()-d)/1000);if(s<60)return s+t('secAgo');if(s<3600)return Math.round(s/60)+t('minAgo');if(s<86400)return Math.round(s/3600)+t('hrAgo');return Math.round(s/86400)+t('dayAgo');}
 
 let toastTimer;
-function toast(msg, type = '') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = 'toast show' + (type ? ' ' + type : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), 3000);
+function toast(msg,type=''){const e=document.getElementById('toast');e.textContent=msg;e.className='toast show'+(type?' '+type:'');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),3000);}
+
+function init(){
+  loadSettingsToForm();renderCatCards();renderLogFilter();renderRecentEvents();applyLang();
+  if(loadSettings().apiKey)document.getElementById('setupOverlay').classList.add('hidden');
+  setInterval(()=>{const s=loadSettings();const a=generateHealthAlerts(getLogs(),s);if(a.length)sendNotifications({catName:'Health',cat:'none',activity:'none',duration:0,confidence:0,notes:'',timestamp:new Date().toISOString()},s,a);},6*3600000);
 }
-
-// ════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════
-function init() {
-  loadSettingsToForm();
-  renderRecentEvents();
-
-  const s = loadSettings();
-  if (s.apiKey) {
-    document.getElementById('setupOverlay').classList.add('hidden');
-  }
-
-  // Daily health check
-  setInterval(() => {
-    const s = loadSettings();
-    const alerts = generateHealthAlerts(getLogs(), s);
-    if (alerts.length > 0) {
-      sendNotifications({ catName: '健康監察', cat: 'none', activity: 'none', duration: 0, confidence: 0, notes: '', timestamp: new Date().toISOString() }, s, alerts);
-    }
-  }, 6 * 3600 * 1000); // Every 6 hours
-}
-
 init();
 </script>
 </body>
