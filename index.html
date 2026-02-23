@@ -398,6 +398,10 @@ const STRINGS = {
     tgOK:'✅ Telegram 測試成功',tgFail:'❌ Telegram 錯誤',
     tgFillAll:'請填寫 Telegram Token 同 Chat ID',discordFillAll:'請先填寫 Discord Webhook URL',
     apiKeyRequired:'❌ 請先填寫 Claude API Key',camError:'❌ 無法存取鏡頭',
+    apiErr401:'❌ API Key 錯誤，請到設定更正',
+    apiErr429:'⚠️ API 請求過多，請稍後再試',
+    apiErrGeneric:'❌ Claude API 錯誤',
+    apiErrNetwork:'❌ 網絡錯誤，無法連接 Claude API',
     photoSaved:'參考相已儲存',photoTooLarge:'❌ 相片太大，請選細一啲',
     catAdded:'已新增貓貓',catDeleted:'已刪除',
     sessionFor:'如廁紀錄',avgPerSession:'平均每次',weekVisits:'本週如廁',
@@ -474,6 +478,10 @@ const STRINGS = {
     tgOK:'✅ Telegram test OK',tgFail:'❌ Telegram error',
     tgFillAll:'Please fill Telegram Token and Chat ID',discordFillAll:'Please fill Discord Webhook URL first',
     apiKeyRequired:'❌ Please add Claude API Key in Settings',camError:'❌ Cannot access camera',
+    apiErr401:'❌ Invalid API Key — please check Settings',
+    apiErr429:'⚠️ API rate limit reached, please wait',
+    apiErrGeneric:'❌ Claude API error',
+    apiErrNetwork:'❌ Network error — cannot reach Claude API',
     photoSaved:'Reference photo saved',photoTooLarge:'❌ Photo too large, choose a smaller one',
     catAdded:'Cat added',catDeleted:'Deleted',
     sessionFor:'Litter box visit',avgPerSession:'Avg per visit',weekVisits:'Visits /wk',
@@ -1027,7 +1035,18 @@ Respond ONLY with valid JSON, no markdown:
   content.push({type:'text',text:prompt});
   try{
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':s.apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:s.apiModel,max_tokens:700,messages:[{role:'user',content}]})});
-    if(!resp.ok)return;
+    if(!resp.ok){
+      let errMsg;
+      if(resp.status===401)errMsg=t('apiErr401');
+      else if(resp.status===429)errMsg=t('apiErr429');
+      else errMsg=`${t('apiErrGeneric')} (${resp.status})`;
+      toast(errMsg,'error');
+      setCamStatus(errMsg,'');
+      // Notify via TG/Discord since those work independently of Claude API key
+      await pushMsg(`🚨 ${errMsg}`,s);
+      if(resp.status===401)stopCamera();
+      return;
+    }
     const data=await resp.json();const text=data.content?.[0]?.text||'';
     try{
       const result=JSON.parse(text.replace(/```json|```/g,'').trim());
@@ -1037,7 +1056,11 @@ Respond ONLY with valid JSON, no markdown:
       document.getElementById('sessionActivity').textContent=translateActivity(result.activity);
       document.getElementById('sessionConf').textContent=Math.round((result.confidence||0)*100)+'%'+(unk?' ⚠️':'');
     }catch(e){console.error('parse error',text);}
-  }catch(e){console.error('api error',e);}
+  }catch(e){
+    // Network-level failure (offline, DNS, etc.)
+    toast(t('apiErrNetwork'),'error');
+    console.error('api error',e);
+  }
   setCamStatus(t('inSession'),'in-session');
 }
 
