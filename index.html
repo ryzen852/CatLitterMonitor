@@ -1138,8 +1138,10 @@ Respond ONLY with valid JSON, no markdown:
     }catch(e){console.error('parse error',text);}
   }catch(e){
     // Network-level failure (offline, DNS, etc.)
-    toast(t('apiErrNetwork'),'error');
+    const errMsg=t('apiErrNetwork');
+    toast(errMsg,'error');
     console.error('api error',e);
+    await pushMsg(`🚨 ${errMsg}`,s);
   }
   setCamStatus(t('inSession'),'in-session');
 }
