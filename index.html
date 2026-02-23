@@ -156,6 +156,17 @@ nav button.active{color:var(--teal);border-bottom-color:var(--teal)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 .empty{text-align:center;padding:36px 20px;color:var(--text-dim);font-size:12px}
 .empty-icon{font-size:36px;margin-bottom:10px}
+/* WASTE ANALYSIS PANEL */
+.waste-panel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-top:6px}
+.waste-panel-title{font-size:10px;color:var(--teal-dim);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.waste-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.waste-item{font-size:10px}
+.waste-item .wlabel{color:var(--text-dim);display:block;margin-bottom:1px;font-size:9px}
+.waste-item .wval{color:var(--text-bright)}
+.waste-item .wval.warn{color:var(--amber)}
+.waste-item .wval.alert{color:var(--red)}
+.waste-flag{display:inline-block;background:rgba(255,82,82,.15);border:1px solid rgba(255,82,82,.3);color:var(--red);font-size:9px;padding:2px 6px;border-radius:4px;margin:2px 2px 0 0}
+.waste-flag.warn{background:rgba(255,183,77,.15);border-color:rgba(255,183,77,.3);color:var(--amber)}
 </style>
 </head>
 <body>
@@ -377,7 +388,23 @@ const STRINGS = {
     minCatError:'最少保留一隻貓貓',deleteConfirm:'刪除',
     identBasisPfx:'🔍',
     hrAgoSuffix:' 小時未有如廁記錄',timesToday:' 次，次數偏多',tooLong:'，時間過長',
-    noPoopSuffix:'超過 48 小時未有大便記錄'
+    noPoopSuffix:'超過 48 小時未有大便記錄',
+    // Waste analysis display
+    wasteAnalysis:'🔬 廢物分析',wasteNotVisible:'影唔到廢物（已掩沙或角度問題）',
+    urineClump:'尿團',urineColor:'尿液顏色',fecesSect:'糞便',fecesColor:'顏色',fecesConsist:'形態',
+    straining:'觀察到用力/掙扎',
+    // Urine clump sizes
+    uSmall:'偏細（可能飲水不足）',uNormal:'正常',uLarge:'偏大（飲水量高）',
+    // Urine colors
+    ucNormal:'淡黃色（正常）',ucDark:'深黃色（濃縮，建議多飲水）',ucOrange:'橙色（需留意）',ucBlood:'見血（⚠️ 立即求醫）',
+    // Feces colors
+    fcNormal:'棕色（正常）',fcBlack:'黑色（可能消化道出血）',fcPale:'灰白色（肝臟/膽道問題）',fcRed:'帶紅色（下消化道出血）',
+    // Feces consistency
+    fsNormal:'正常成形',fsSoft:'偏軟/散',fsHard:'偏硬/細粒',fsDiarrhea:'腹瀉（⚠️ 需關注）',
+    // Waste health flags in notifications
+    wfBloodUrine:'尿液帶血',wfDarkUrine:'尿液深色（濃縮）',wfSmallClump:'尿團偏細',
+    wfBloodFeces:'糞便帶血',wfBlackFeces:'糞便呈黑色',wfDiarrhea:'腹瀉',wfStraining:'如廁時明顯用力',
+    checkingPresence:'🔍 確認離場中...',catStillPresent:'貓貓仲係度，繼續監察'
   },
   en: {
     appTitle:'Cat Litter Monitor',hdrTitle:'Cat <span>Litter</span> Monitor',
@@ -431,7 +458,23 @@ const STRINGS = {
     minCatError:'At least one cat required',deleteConfirm:'Delete',
     identBasisPfx:'🔍',
     hrAgoSuffix:' hours without a visit',timesToday:' visits today (high)',tooLong:' — unusually long',
-    noPoopSuffix:'No defecation record for 48+ hours'
+    noPoopSuffix:'No defecation record for 48+ hours',
+    // Waste analysis display
+    wasteAnalysis:'🔬 Waste Analysis',wasteNotVisible:'Waste not visible (covered or angle)',
+    urineClump:'Urine clump',urineColor:'Urine colour',fecesSect:'Feces',fecesColor:'Colour',fecesConsist:'Consistency',
+    straining:'Straining observed',
+    // Urine clump sizes
+    uSmall:'Small (possible low water intake)',uNormal:'Normal',uLarge:'Large (high water intake)',
+    // Urine colors
+    ucNormal:'Pale yellow (normal)',ucDark:'Dark yellow (concentrated — drink more water)',ucOrange:'Orange (monitor)',ucBlood:'Blood present (⚠️ see vet immediately)',
+    // Feces colors
+    fcNormal:'Brown (normal)',fcBlack:'Black (possible GI bleed)',fcPale:'Pale/grey (liver or bile duct issue)',fcRed:'Red-tinged (lower GI bleed)',
+    // Feces consistency
+    fsNormal:'Normal formed',fsSoft:'Soft/loose',fsHard:'Hard/small pellets',fsDiarrhea:'Diarrhoea (⚠️ monitor closely)',
+    // Waste health flags in notifications
+    wfBloodUrine:'Blood in urine',wfDarkUrine:'Dark concentrated urine',wfSmallClump:'Small urine clump',
+    wfBloodFeces:'Blood in feces',wfBlackFeces:'Black feces',wfDiarrhea:'Diarrhoea',wfStraining:'Visible straining',
+    checkingPresence:'🔍 Confirming departure...',catStillPresent:'Cat still present, continuing'
   }
 };
 
@@ -715,7 +758,7 @@ function handleMotionState(smoothedPct,threshold,s){
   }else{
     setStatusDot(stream?'active':'');
     if(isInSession&&!sessionEndTimer)
-      sessionEndTimer=setTimeout(()=>endSession(false),s.sessionEndDelay*1000);
+      sessionEndTimer=setTimeout(()=>schedulePresenceCheck(s),s.sessionEndDelay*1000);
     if(!isInSession)motionStartTime=null;
   }
 
@@ -743,7 +786,6 @@ function handleMotionState(smoothedPct,threshold,s){
 // ═══════════════════════════════════════
 function startSession(){
   isInSession=true;sessionStartTime=new Date();sessionApiCalls=[];lastAnalyzeTime=0;
-  // Reset smart capture flags for this new session
   entryFrameDone=false;dropFrameDone=false;sessionPeakPct=0;recentPcts=[];
   document.getElementById('sessionCard').classList.add('visible');
   document.getElementById('sessionStart').textContent=formatTime(sessionStartTime);
@@ -752,7 +794,7 @@ function startSession(){
   document.getElementById('sessionConf').textContent='—';
   sessionTimerInterval=setInterval(updateSessionDuration,1000);
   setCamStatus(t('inSession'),'in-session');setOverlay(t('inSession'));
-  // Shot 1 will fire automatically in handleMotionState after 3s
+  // Shot 1 fires automatically in handleMotionState after 3s
 }
 
 function updateSessionDuration(){
@@ -761,28 +803,58 @@ function updateSessionDuration(){
   document.getElementById('sessionDur').textContent=m>0?`${m}${t('dm')} ${s2}${t('ds')}`:`${s2}${t('ds')}`;
 }
 
-async function endSession(aborted){
+// Called when stillness timer expires — ask Claude if cat is still present.
+// Shot 3 (presence_check) serves dual purpose: confirm departure + waste analysis.
+// If cat is still there → reset timer and keep session alive.
+// If cat is gone → finalize.
+async function schedulePresenceCheck(s){
+  sessionEndTimer=null;
+  setCamStatus(t('checkingPresence'),'analyzing');
+  await analyzeFrame('presence_check');
+  // Check the latest result
+  const latest=sessionApiCalls[sessionApiCalls.length-1];
+  if(latest&&latest.cat_present){
+    // Cat still there — reset end timer
+    setCamStatus(t('catStillPresent'),'in-session');
+    setTimeout(()=>setCamStatus(t('inSession'),'in-session'),2000);
+    sessionEndTimer=setTimeout(()=>schedulePresenceCheck(s),s.sessionEndDelay*1000);
+  }else{
+    // Cat gone — finalize
+    finalizeSession();
+  }
+}
+
+async function finalizeSession(){
   isInSession=false;
   if(sessionTimerInterval){clearInterval(sessionTimerInterval);sessionTimerInterval=null;}
   if(sessionEndTimer){clearTimeout(sessionEndTimer);sessionEndTimer=null;}
   motionStartTime=null;
   document.getElementById('sessionCard').classList.remove('visible');
   setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
-  if(aborted||!sessionApiCalls.length&&!entryFrameDone)return;
-  // Shot 3: final frame — captures covering/exit behaviour
-  await analyzeFrame('final');
+  if(!sessionApiCalls.length)return;
   const duration=Math.round((Date.now()-sessionStartTime)/1000);
   const result=aggregateSession(sessionApiCalls);
   if(!result.catPresent)return;
   const s=loadSettings();
-  const entry={timestamp:sessionStartTime.toISOString(),endTimestamp:new Date().toISOString(),duration,cat:result.cat,catName:getCatName(result.cat),activity:result.activity,confidence:result.confidence,notes:result.notes,identBasis:result.identBasis,alerts:[]};
+  const entry={timestamp:sessionStartTime.toISOString(),endTimestamp:new Date().toISOString(),duration,cat:result.cat,catName:getCatName(result.cat),activity:result.activity,confidence:result.confidence,notes:result.notes,identBasis:result.identBasis,wasteAnalysis:result.wasteAnalysis,alerts:[]};
   entry.alerts=checkHealth(entry,s);
   addLog(entry);await sendNotifications(entry,s,entry.alerts);
 }
 
+async function endSession(aborted){
+  // Called only on manual stop
+  isInSession=false;
+  if(sessionTimerInterval){clearInterval(sessionTimerInterval);sessionTimerInterval=null;}
+  if(sessionEndTimer){clearTimeout(sessionEndTimer);sessionEndTimer=null;}
+  motionStartTime=null;
+  document.getElementById('sessionCard').classList.remove('visible');
+  setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
+  if(!aborted&&sessionApiCalls.length)finalizeSession();
+}
+
 function aggregateSession(calls){
   if(!calls.length)return{catPresent:false};
-  const catC={},actC={};let notes='',identBasis='',totalConf=0,valid=0;
+  const catC={},actC={};let notes='',identBasis='',totalConf=0,valid=0,bestWaste=null;
   calls.forEach(c=>{
     if(!c||!c.cat_present)return;valid++;
     const cat=c.cat_identity||'unknown';catC[cat]=(catC[cat]||0)+1;
@@ -790,11 +862,14 @@ function aggregateSession(calls){
     if(c.health_notes)notes=c.health_notes;
     if(c.identification_basis)identBasis=c.identification_basis;
     totalConf+=c.confidence||0.5;
+    // Prefer waste analysis from drop/presence shots where waste is actually visible
+    if(c.waste_analysis&&c.waste_analysis.waste_visible&&!bestWaste)bestWaste=c.waste_analysis;
+    else if(c.waste_analysis&&c.waste_analysis.waste_visible)bestWaste=c.waste_analysis; // always take latest visible
   });
   if(!valid)return{catPresent:false};
   const cat=Object.keys(catC).sort((a,b)=>catC[b]-catC[a])[0];
   const activity=Object.keys(actC).sort((a,b)=>actC[b]-actC[a])[0];
-  return{catPresent:true,cat,activity,confidence:Math.round((totalConf/valid)*100),notes,identBasis};
+  return{catPresent:true,cat,activity,confidence:Math.round((totalConf/valid)*100),notes,identBasis,wasteAnalysis:bestWaste};
 }
 
 function checkHealth(entry,s){
@@ -804,6 +879,24 @@ function checkHealth(entry,s){
   if(entry.duration>s.alertMaxDuration*60)alerts.push({type:'warn',msg:`${lang==='zh'?'單次如廁時間 ':'Session '}${Math.round(entry.duration/60)}${t('dm')}${t('tooLong')}`});
   const lp=logs.find(l=>l.cat===entry.cat&&l.activity==='defecating');
   if(lp&&(now-new Date(lp.timestamp))/3600000>48)alerts.push({type:'alert',msg:`${entry.catName} ${t('noPoopSuffix')}`});
+  // Waste analysis health flags
+  const wa=entry.wasteAnalysis;
+  if(wa){
+    if(wa.urine_color==='red_blood')alerts.push({type:'alert',msg:`${entry.catName} — ⚠️ ${t('wfBloodUrine')}`});
+    if(wa.urine_color==='dark_yellow'||wa.urine_color==='orange')alerts.push({type:'warn',msg:`${entry.catName} — ${t('wfDarkUrine')}`});
+    if(wa.urine_clump_size==='small')alerts.push({type:'warn',msg:`${entry.catName} — ${t('wfSmallClump')}`});
+    if(wa.feces_color==='red_tinged')alerts.push({type:'alert',msg:`${entry.catName} — ⚠️ ${t('wfBloodFeces')}`});
+    if(wa.feces_color==='dark_black')alerts.push({type:'alert',msg:`${entry.catName} — ⚠️ ${t('wfBlackFeces')}`});
+    if(wa.feces_consistency==='diarrhea')alerts.push({type:'warn',msg:`${entry.catName} — ${t('wfDiarrhea')}`});
+    if(wa.straining_observed)alerts.push({type:'warn',msg:`${entry.catName} — ${t('wfStraining')}`});
+    // Also parse any flags Claude itself flagged
+    if(wa.waste_health_flags&&wa.waste_health_flags.length){
+      wa.waste_health_flags.forEach(f=>{
+        if(!alerts.some(a=>a.msg.includes(f)))
+          alerts.push({type:'warn',msg:`${entry.catName} — ${f}`});
+      });
+    }
+  }
   return alerts;
 }
 
@@ -829,14 +922,27 @@ async function analyzeFrame(shotType='manual'){
   for(const c of cats){const ref=getRefPhoto(c.id);if(ref){content.push({type:'text',text:`Reference photo of ${c.name||c.id}:`});content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:ref}});}}
   const hasRefs=cats.some(c=>getRefPhoto(c.id));
   // Shot-specific context hint for Claude
+  const doWaste = (shotType==='drop'||shotType==='presence_check');
   const shotHint={
-    entry:'This is the ENTRY SHOT — cat has just stepped into the litter box. Focus on identification.',
-    drop:'This is the SQUAT SHOT — motion just dropped sharply, cat is likely in elimination posture. Look carefully for urination or defecation stance.',
-    final:'This is the FINAL SHOT — cat is about to leave or covering waste. Note any covering behaviour. Use the full session to infer activity type.',
+    entry:'ENTRY SHOT — cat has just stepped in. Focus on cat identification. Waste analysis not needed yet.',
+    drop:'SQUAT SHOT — motion dropped sharply, cat likely in elimination posture. Attempt waste analysis if anything is visible.',
+    presence_check:'PRESENCE CHECK + WASTE ANALYSIS — cat may have left. (1) Is cat still present? (2) Now that cat may have moved, attempt full waste analysis of what is visible in the litter.',
     manual:'General analysis.'
   }[shotType]||'General analysis.';
 
-  const prompt=`You are monitoring a cat litter box. Identify which cat is present and what they are doing.
+  const wasteSchema = doWaste ? `,
+  "waste_analysis": {
+    "waste_visible": true or false,
+    "urine_clump_size": "small" or "normal" or "large" or "none_visible",
+    "urine_color": "normal_pale_yellow" or "dark_yellow" or "orange" or "red_blood" or "none_visible",
+    "feces_present": true or false,
+    "feces_color": "normal_brown" or "dark_black" or "pale_grey" or "red_tinged" or "none_visible",
+    "feces_consistency": "normal" or "soft_loose" or "hard_small_pellets" or "diarrhea" or "none_visible",
+    "straining_observed": true or false,
+    "waste_health_flags": ["array of specific concerns you observe, empty array if none"]
+  }` : `, "waste_analysis": null`;
+
+  const prompt=`You are monitoring a cat litter box.
 
 SHOT CONTEXT: ${shotHint}
 
@@ -845,21 +951,35 @@ ${catDesc}
 
 ${hasRefs?'Reference photos provided above. Use for direct visual comparison.':'No reference photos — use written descriptions only.'}
 
-IDENTIFICATION STEPS:
+IDENTIFICATION:
 1. Is litter box visible in the LIVE IMAGE?
 2. Is any cat present?
 3. If yes: compare against references + descriptions (size, coat, markings, face, ears, unique features)
 4. If confidence < 0.5, set cat_identity to "unknown". DO NOT GUESS.
+Confidence guide: 0.9+ clearly identified | 0.7–0.89 likely | 0.5–0.69 possible | <0.5 → unknown
 
-Confidence: 0.9+ clearly identified | 0.7-0.89 likely | 0.5-0.69 possible | <0.5 → unknown
+${doWaste?`WASTE ANALYSIS GUIDELINES (only if waste_analysis requested):
+- Only report what is genuinely visible — do NOT guess or infer from context alone
+- Urine clumps: look for clumped/darker areas of litter
+- Feces: look for solid darker deposits
+- If litter is fully covered/undisturbed, set waste_visible: false and all sub-fields to none_visible
+- For health flags: note any unusual colouration, abnormal size, or behavioural signs of straining`:''}
 
-Respond ONLY with valid JSON:
-{"litter_box_visible":bool,"cat_present":bool,"cat_identity":${catIds} or "unknown" or "none","identification_basis":"brief explanation","activity":"urinating" or "defecating" or "investigating" or "covering" or "exiting" or "none","confidence":0.0-1.0,"health_notes":"observations or empty string"}`;
+Respond ONLY with valid JSON, no markdown:
+{
+  "litter_box_visible": true or false,
+  "cat_present": true or false,
+  "cat_identity": ${catIds} or "unknown" or "none",
+  "identification_basis": "brief explanation or empty string",
+  "activity": "urinating" or "defecating" or "investigating" or "covering" or "exiting" or "none",
+  "confidence": 0.0 to 1.0,
+  "health_notes": "behavioural observations or empty string"${wasteSchema}
+}`;
   content.push({type:'text',text:'LIVE IMAGE:'});
   content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:liveB64}});
   content.push({type:'text',text:prompt});
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':s.apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:s.apiModel,max_tokens:400,messages:[{role:'user',content}]})});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':s.apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:s.apiModel,max_tokens:700,messages:[{role:'user',content}]})});
     if(!resp.ok)return;
     const data=await resp.json();const text=data.content?.[0]?.text||'';
     try{
@@ -889,6 +1009,18 @@ function buildMsg(entry,alerts){
   const time=new Date(entry.timestamp).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
   let msg=`${emoji} **${entry.catName}** ${t('sessionFor')}\n🕐 ${time} ｜ ⏱ ${dur}\n${translateActivity(entry.activity)}\n`;
   if(entry.notes)msg+=`📝 ${entry.notes}\n`;
+  // Waste summary (only if visible and has meaningful data)
+  const wa=entry.wasteAnalysis;
+  if(wa&&wa.waste_visible){
+    msg+=`\n🔬 ${t('wasteAnalysis')}\n`;
+    if(wa.urine_clump_size&&wa.urine_clump_size!=='none_visible')msg+=`• ${t('urineClump')}: ${translateWasteClump(wa.urine_clump_size)}\n`;
+    if(wa.urine_color&&wa.urine_color!=='none_visible')msg+=`• ${t('urineColor')}: ${translateUrineColor(wa.urine_color)}\n`;
+    if(wa.feces_present){
+      if(wa.feces_color&&wa.feces_color!=='none_visible')msg+=`• ${t('fecesColor')}: ${translateFecesColor(wa.feces_color)}\n`;
+      if(wa.feces_consistency&&wa.feces_consistency!=='none_visible')msg+=`• ${t('fecesConsist')}: ${translateFecesConsist(wa.feces_consistency)}\n`;
+    }
+    if(wa.straining_observed)msg+=`• ⚠️ ${t('straining')}\n`;
+  }
   if(alerts.length){msg+=`\n⚠️ **${t('healthAlerts')}**\n`;alerts.forEach(a=>msg+=`• ${a.msg}\n`);}
   return msg;
 }
@@ -987,6 +1119,36 @@ function renderLog(){
   el.innerHTML=Object.entries(groups).map(([date,entries])=>`<div class="log-date-group"><div class="log-date-label">${date}</div>${entries.map(l=>logEntryHTML(l)).join('')}</div>`).join('');
 }
 
+function translateWasteClump(v){return{small:t('uSmall'),normal:t('uNormal'),large:t('uLarge'),none_visible:'—'}[v]||'—';}
+function translateUrineColor(v){return{normal_pale_yellow:t('ucNormal'),dark_yellow:t('ucDark'),orange:t('ucOrange'),red_blood:t('ucBlood'),none_visible:'—'}[v]||'—';}
+function translateFecesColor(v){return{normal_brown:t('fcNormal'),dark_black:t('fcBlack'),pale_grey:t('fcPale'),red_tinged:t('fcRed'),none_visible:'—'}[v]||'—';}
+function translateFecesConsist(v){return{normal:t('fsNormal'),soft_loose:t('fsSoft'),hard_small_pellets:t('fsHard'),diarrhea:t('fsDiarrhea'),none_visible:'—'}[v]||'—';}
+function wasteColorClass(field,val){
+  if(field==='uc'&&(val==='red_blood'))return 'alert';
+  if(field==='uc'&&(val==='dark_yellow'||val==='orange'))return 'warn';
+  if(field==='fc'&&(val==='red_tinged'||val==='dark_black'))return 'alert';
+  if(field==='fc'&&(val==='pale_grey'))return 'warn';
+  if(field==='fs'&&val==='diarrhea')return 'warn';
+  return '';
+}
+
+function wasteAnalysisHTML(wa){
+  if(!wa)return '';
+  if(!wa.waste_visible)return `<div class="waste-panel"><div class="waste-panel-title">${t('wasteAnalysis')}</div><span style="font-size:10px;color:var(--text-dim)">${t('wasteNotVisible')}</span></div>`;
+  const flags=(wa.waste_health_flags||[]).map(f=>`<span class="waste-flag warn">${f}</span>`).join('');
+  const strainBadge=wa.straining_observed?`<span class="waste-flag">${t('straining')}</span>`:'';
+  return `<div class="waste-panel">
+    <div class="waste-panel-title">${t('wasteAnalysis')}</div>
+    <div class="waste-grid">
+      <div class="waste-item"><span class="wlabel">${t('urineClump')}</span><span class="wval ${wasteColorClass('uc',wa.urine_clump_size)}">${translateWasteClump(wa.urine_clump_size)}</span></div>
+      <div class="waste-item"><span class="wlabel">${t('urineColor')}</span><span class="wval ${wasteColorClass('uc',wa.urine_color)}">${translateUrineColor(wa.urine_color)}</span></div>
+      ${wa.feces_present?`<div class="waste-item"><span class="wlabel">${t('fecesColor')}</span><span class="wval ${wasteColorClass('fc',wa.feces_color)}">${translateFecesColor(wa.feces_color)}</span></div>
+      <div class="waste-item"><span class="wlabel">${t('fecesConsist')}</span><span class="wval ${wasteColorClass('fs',wa.feces_consistency)}">${translateFecesConsist(wa.feces_consistency)}</span></div>`:''}
+    </div>
+    ${flags||strainBadge?`<div style="margin-top:5px">${strainBadge}${flags}</div>`:''}
+  </div>`;
+}
+
 function logEntryHTML(l){
   const color=getCatColor(l.cat);
   const time=new Date(l.timestamp).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
@@ -1003,6 +1165,7 @@ function logEntryHTML(l){
     ${l.notes?`<div class="log-entry-notes">「${l.notes}」</div>`:''}
     ${l.identBasis?`<div class="log-ident">${t('identBasisPfx')} ${l.identBasis}</div>`:''}
     <div class="log-entry-meta"><span>⏱ ${dur}</span><span>🎯 ${l.confidence}%</span></div>
+    ${wasteAnalysisHTML(l.wasteAnalysis)}
     ${alertHTML}
   </div>`;
 }
