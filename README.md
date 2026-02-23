@@ -2,19 +2,20 @@
 
 A self-hosted, AI-powered litter box monitor that runs entirely in a mobile browser — no server, no native app, no subscription.
 
-Point an old Android phone at your litter box and get per-cat visit logs, health alerts, and Discord/Telegram notifications — all powered by Claude Vision.
+Point any phone or tablet with a camera at your litter box and get per-cat visit logs, health alerts, and Discord/Telegram notifications — all powered by Claude Vision.
 
 ---
 
 ## Features
 
 - **Motion-triggered capture** — only calls the API when a cat is actually present, keeping costs minimal
-- **Smart 3-shot capture** — entry shot for identification, drop shot timed to the squat moment, final shot for covering behaviour
+- **Smart 3-shot capture** — entry shot for identification, drop shot timed to the squat moment, presence-check shot to confirm the cat has left
 - **Multi-cat support** — add as many cats as you have; each gets a name, breed, reference photo, and colour tag
 - **AI identification** — Claude compares live frames against per-cat reference photos and written descriptions; records as "unknown" rather than guessing when confidence is low
-- **Health monitoring** — alerts for unusual visit frequency, abnormally long sessions, and extended gaps between defecation records
-- **Discord + Telegram notifications** — instant push on every visit, with health warnings included
-- **Bilingual UI** — switch between Traditional Chinese and English at any time
+- **Waste health analysis** — urine clump size, colour, feces consistency and colour; flags abnormalities automatically
+- **Health monitoring** — alerts for unusual visit frequency, abnormally long sessions, no-elimination visits, and extended gaps between defecation records
+- **Discord + Telegram notifications** — configurable modes: every visit, alerts only, or daily summary
+- **Bilingual UI** — switch between Traditional Chinese and English at any time; notifications follow the same language
 - **Zero backend** — runs as a static HTML file; all data stored in browser LocalStorage
 
 ---
@@ -22,7 +23,7 @@ Point an old Android phone at your litter box and get per-cat visit logs, health
 ## How It Works
 
 ```
-Android camera (24/7)
+Camera (24/7)
         │
         ▼  every 0.5s, local only
    Motion detection (ROI)
@@ -34,40 +35,27 @@ Android camera (24/7)
                 ▼
            Session starts
                 │
-                ├─ +3s        → Shot 1 (entry)    → Claude API
-                ├─ peak drops → Shot 2 (squat)    → Claude API
+                ├─ +3s         → Shot 1 (entry)           → Claude API
+                ├─ peak drops  → Shot 2 (squat/eliminate)  → Claude API
                 │
-                ▼  stillness for 45s
-           Session ends
+                ▼  stillness for 45s → AI presence check
                 │
-                ├─               Shot 3 (final)   → Claude API
-                ├─ aggregate results + health check
-                ├─ save to LocalStorage
-                └─ notify Discord + Telegram
+                ├─ cat still there → reset timer, continue
+                └─ cat gone   → Shot 3 (presence check + waste analysis) → Claude API
+                                   aggregate results + health check
+                                   save to LocalStorage
+                                   notify Discord + Telegram
 ```
 
-Motion detection runs locally on-device — the Claude API is only called after a session is confirmed, and exactly 3 times per session.
+Motion detection runs entirely on-device — the Claude API is only called after a session is confirmed, and at most 3 times per session.
 
 ---
 
 ## Setup
 
-### 1. Deploy
+### 1. Configure
 
-Upload `index.html` to any static host:
-
-- **GitHub Pages** — push to a repo, enable Pages under Settings → Pages → Deploy from branch `main`
-- **Netlify** — drag and drop the file at [app.netlify.com/drop](https://app.netlify.com/drop)
-
-### 2. Open on Android
-
-Open the deployed URL in Chrome on the Android phone you'll use as the camera.
-
-Tap **⋮ → Add to Home Screen** to install it as a full-screen app.
-
-### 3. Configure
-
-Go to **Settings** and fill in:
+Open the app, go to **Settings** and fill in:
 
 | Field | Where to get it |
 |-------|----------------|
@@ -76,7 +64,7 @@ Go to **Settings** and fill in:
 | Telegram Bot Token | [@BotFather](https://t.me/BotFather) on Telegram |
 | Telegram Chat ID | [@userinfobot](https://t.me/userinfobot) or your group ID |
 
-### 4. Add your cats
+### 2. Add your cats
 
 Under **Cat Profiles**, tap each cat card to expand it:
 
@@ -86,11 +74,11 @@ Under **Cat Profiles**, tap each cat card to expand it:
 
 Tap **＋ Add Cat** to add more.
 
-### 5. Start monitoring
+### 3. Start monitoring
 
 Go to **Monitor**, tap **Start**, then drag to draw the litter box zone on the camera feed.
 
-Keep the phone plugged in and the screen active. Chrome's Screen Wake Lock is requested automatically; if the phone still sleeps, disable screen timeout in Android display settings.
+Keep the device plugged in and the screen active. Chrome's Screen Wake Lock is requested automatically; if the device still sleeps, disable screen timeout in your system display settings.
 
 ---
 
@@ -101,9 +89,21 @@ Keep the phone plugged in and the screen active. Chrome's Screen Wake Lock is re
 | Motion sensitivity | 15% | Lower = more sensitive. Increase if getting false triggers from shadows/light changes |
 | Trigger delay | 3s | Sustained motion required before a session starts |
 | Session end delay | 45s | Stillness required before ending. 45s recommended — cats pause while covering |
+| No-elimination alert | 90s | Alert if cat is in box this long without urinating or defecating |
 | No-visit alert | 24h | Alert if a cat hasn't visited in this many hours |
 | Max daily visits | 8 | Alert if exceeded |
 | Max session duration | 15 min | Alert if a single session runs this long |
+
+---
+
+## Notification Modes
+
+| Mode | Behaviour |
+|------|-----------|
+| Every visit | Send on each confirmed litter box visit |
+| Everything | Every visit plus sessions where no cat was detected (useful for debugging) |
+| Alerts only | Only send when a health alert is triggered |
+| Daily summary | One message at 8 AM summarising the previous day per cat |
 
 ---
 
@@ -129,7 +129,7 @@ Assumes 2 cats, ~7 litter box visits per day combined, 3 API calls per session, 
 ## Tech Stack
 
 - Vanilla HTML/CSS/JS — single file, no build step, no dependencies
-- [Claude Vision API](https://docs.anthropic.com/en/docs/vision) for cat identification and activity classification
+- [Claude Vision API](https://docs.anthropic.com/en/docs/vision) for cat identification, activity classification, and waste health analysis
 - Canvas API for local motion detection
 - Screen Wake Lock API to keep the display on
 - Discord Webhooks + Telegram Bot API for notifications
@@ -140,7 +140,7 @@ Assumes 2 cats, ~7 litter box visits per day combined, 3 API calls per session, 
 
 - **Enclosed litter boxes** will significantly reduce accuracy — the camera can't see inside
 - **Very similar cats** (same breed, same colour, no distinguishing marks) may frequently return "unknown" even with reference photos
-- **Lighting** — the camera feed quality at night depends on ambient light; a small IR night-light near the litter box helps
+- **Lighting** — camera feed quality at night depends on ambient light; a small IR night-light near the litter box helps
 - **LocalStorage cap** — browsers typically allow 5–10 MB; logs are capped at 500 entries automatically
 
 ---
