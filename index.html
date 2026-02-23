@@ -511,7 +511,7 @@ let lang = localStorage.getItem('catmon_lang') || 'zh';
 const t = k => STRINGS[lang][k] || STRINGS.zh[k] || k;
 
 function applyLang() {
-  // Static text nodes
+  // Elements whose IDs match STRINGS keys exactly
   const ids = Object.keys(STRINGS.zh).filter(k => document.getElementById(k));
   ids.forEach(id => {
     const el = document.getElementById(id);
@@ -520,9 +520,20 @@ function applyLang() {
     else if (id==='idTip') el.innerHTML = t('idTip');
     else el.textContent = t(id);
   });
+  // Elements with hyphenated IDs that don't match STRINGS keys
+  const hyphenMap = {
+    'so-title':'soTitle', 'so-desc':'soDesc', 'so-go':'soGo', 'so-skip':'soSkip',
+    'hdr-title':'hdrTitle'
+  };
+  Object.entries(hyphenMap).forEach(([id,key])=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    if(key==='hdrTitle')el.innerHTML=t(key);
+    else el.textContent=t(key);
+  });
   document.getElementById('langBtn').textContent = lang==='zh'?'EN':'中';
   document.title = '🐱 ' + t('appTitle');
-  // Translate select options that need i18n
+  // Translate select options
   const optMap={notifAllOpt:'notifAll',notifAlertsOpt:'notifAlertsOnly',notifDailyOpt:'notifDaily'};
   Object.entries(optMap).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key);});
   renderCatCards();
@@ -1115,8 +1126,8 @@ function scheduleDailySummary(){
   },ms);
 }
 
-async function testDiscord(){const url=v('discordWebhook');if(!url){toast(t('discordFillAll'),'error');return;}try{await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'✅ Cat Monitor test OK 🐱',username:'🐱 Cat Monitor'})});toast(t('discordOK'),'success');}catch(e){toast(t('discordFail'),'error');}}
-async function testTelegram(){const token=v('tgToken'),chatId=v('tgChatId');if(!token||!chatId){toast(t('tgFillAll'),'error');return;}try{const r=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text:'✅ Cat Monitor test OK 🐱'})});const d=await r.json();d.ok?toast(t('tgOK'),'success'):toast(t('tgFail')+': '+d.description,'error');}catch(e){toast(t('tgFail'),'error');}}
+async function testDiscord(){const url=v('discordWebhook');if(!url){toast(t('discordFillAll'),'error');return;}try{await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:`✅ ${t('appTitle')} — ${t('testDiscordBtn')} OK 🐱`,username:'🐱 Cat Monitor'})});toast(t('discordOK'),'success');}catch(e){toast(t('discordFail'),'error');}}
+async function testTelegram(){const token=v('tgToken'),chatId=v('tgChatId');if(!token||!chatId){toast(t('tgFillAll'),'error');return;}try{const r=await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:chatId,text:`✅ ${t('appTitle')} — ${t('testTelegramBtn')} OK 🐱`})});const d=await r.json();d.ok?toast(t('tgOK'),'success'):toast(t('tgFail')+': '+d.description,'error');}catch(e){toast(t('tgFail'),'error');}}
 
 // ═══════════════════════════════════════
 // ROI
