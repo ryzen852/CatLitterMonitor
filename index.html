@@ -30,8 +30,8 @@ nav button.active{color:var(--teal);border-bottom-color:var(--teal)}
 .camera-wrap{position:relative;background:#000;border-radius:12px;overflow:hidden;border:1px solid var(--border);aspect-ratio:4/3;max-height:270px}
 #videoEl{width:100%;height:100%;object-fit:cover;display:block}
 #roiCanvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;touch-action:none}
-.cam-overlay{position:absolute;top:8px;left:8px;background:rgba(8,12,18,.8);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;color:var(--teal);backdrop-filter:blur(4px)}
-.cam-status{position:absolute;bottom:8px;right:8px;background:rgba(8,12,18,.85);border-radius:6px;padding:3px 9px;font-size:14px;color:var(--text-dim)}
+.cam-overlay{position:absolute;top:8px;left:8px;background:rgba(8,12,18,.8);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:14px;color:var(--teal);backdrop-filter:blur(4px);pointer-events:none}
+.cam-status{position:absolute;bottom:8px;right:8px;background:rgba(8,12,18,.85);border-radius:6px;padding:3px 9px;font-size:14px;color:var(--text-dim);pointer-events:none}
 .cam-status.in-session{color:var(--amber);border:1px solid var(--amber)}
 .cam-status.analyzing{color:var(--blue);border:1px solid var(--blue)}
 .btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:15px;padding:8px 13px;border-radius:8px;cursor:pointer;transition:all .2s;white-space:nowrap}
@@ -548,6 +548,11 @@ function applyLang() {
     if(key==='hdrTitle')el.innerHTML=t(key);
     else el.textContent=t(key);
   });
+  // Update cam overlay/status only when camera is not running
+  if(!stream){
+    const ov=document.getElementById('camOverlay');if(ov)ov.textContent=t('camStandby');
+    const cs=document.getElementById('camStatus');if(cs){cs.textContent=t('camNotStarted');cs.className='cam-status';}
+  }
   document.getElementById('langBtn').textContent = lang==='zh'?'EN':'中';
   const soLangBtn=document.getElementById('soLangBtn');
   if(soLangBtn)soLangBtn.textContent=lang==='zh'?'EN':'中';
