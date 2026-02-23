@@ -265,6 +265,23 @@ nav button.active{color:var(--teal);border-bottom-color:var(--teal)}
   </div>
 
   <div class="settings-section">
+    <div class="settings-section-title" id="sectionNotifMode">📬 通知模式</div>
+    <div class="field">
+      <label id="notifModeLabel">發送通知時機</label>
+      <select id="notifMode">
+        <option value="all" id="notifAllOpt">每次如廁都發</option>
+        <option value="alerts" id="notifAlertsOpt">只發健康警告</option>
+        <option value="daily" id="notifDailyOpt">每日摘要（早上 8 時）</option>
+      </select>
+    </div>
+    <div class="field">
+      <label id="noEliminationLabel">異常探訪警告：貓咪停留多少秒但冇排泄（0 = 停用）</label>
+      <input type="number" id="noEliminationSecs" value="90" min="0" max="300">
+      <div class="field-hint" id="noEliminationHint">建議 90 秒。貓入砂盆卻冇尿冇便可能係尿道阻塞等緊急情況</div>
+    </div>
+  </div>
+
+  <div class="settings-section">
     <div class="settings-section-title" id="sectionNotif">🔔 通知設定</div>
     <div class="field">
       <label>Discord Webhook URL</label>
@@ -404,7 +421,13 @@ const STRINGS = {
     // Waste health flags in notifications
     wfBloodUrine:'尿液帶血',wfDarkUrine:'尿液深色（濃縮）',wfSmallClump:'尿團偏細',
     wfBloodFeces:'糞便帶血',wfBlackFeces:'糞便呈黑色',wfDiarrhea:'腹瀉',wfStraining:'如廁時明顯用力',
-    checkingPresence:'🔍 確認離場中...',catStillPresent:'貓貓仲係度，繼續監察'
+    checkingPresence:'🔍 確認離場中...',catStillPresent:'貓貓仲係度，繼續監察',
+    sectionNotifMode:'📬 通知模式',notifModeLabel:'發送通知時機',
+    notifAll:'每次如廁都發',notifAlertsOnly:'只發健康警告',notifDaily:'每日摘要（早上 8 時）',
+    noEliminationLabel:'異常探訪警告：貓咪停留多少秒但冇排泄（0 = 停用）',
+    noEliminationHint:'建議 90 秒。貓入砂盆卻冇尿冇便可能係尿道阻塞等緊急情況',
+    noEliminationAlert:'⚠️ 入砂盆但冇排泄',
+    dailySummaryTitle:'📊 每日如廁摘要',visitCount:'如廁次數',peeCount:'尿',poopCount:'便'
   },
   en: {
     appTitle:'Cat Litter Monitor',hdrTitle:'Cat <span>Litter</span> Monitor',
@@ -474,7 +497,13 @@ const STRINGS = {
     // Waste health flags in notifications
     wfBloodUrine:'Blood in urine',wfDarkUrine:'Dark concentrated urine',wfSmallClump:'Small urine clump',
     wfBloodFeces:'Blood in feces',wfBlackFeces:'Black feces',wfDiarrhea:'Diarrhoea',wfStraining:'Visible straining',
-    checkingPresence:'🔍 Confirming departure...',catStillPresent:'Cat still present, continuing'
+    checkingPresence:'🔍 Confirming departure...',catStillPresent:'Cat still present, continuing',
+    sectionNotifMode:'📬 Notification Mode',notifModeLabel:'When to send notifications',
+    notifAll:'Every visit',notifAlertsOnly:'Health alerts only',notifDaily:'Daily summary (8 AM)',
+    noEliminationLabel:'No-elimination alert: seconds in box without output (0 = off)',
+    noEliminationHint:'Recommended 90s. Cat in box with no output may indicate urinary blockage or obstruction.',
+    noEliminationAlert:'⚠️ In box but no elimination',
+    dailySummaryTitle:'📊 Daily Litter Summary',visitCount:'Visits',peeCount:'Pee',poopCount:'Poop'
   }
 };
 
@@ -493,6 +522,9 @@ function applyLang() {
   });
   document.getElementById('langBtn').textContent = lang==='zh'?'EN':'中';
   document.title = '🐱 ' + t('appTitle');
+  // Translate select options that need i18n
+  const optMap={notifAllOpt:'notifAll',notifAlertsOpt:'notifAlertsOnly',notifDailyOpt:'notifDaily'};
+  Object.entries(optMap).forEach(([id,key])=>{const el=document.getElementById(id);if(el)el.textContent=t(key);});
   renderCatCards();
   renderLogFilter();
 }
@@ -637,10 +669,10 @@ function getRefPhoto(catId){
 // ═══════════════════════════════════════
 // SETTINGS
 // ═══════════════════════════════════════
-const SETTING_KEYS=['apiKey','apiModel','discordWebhook','tgToken','tgChatId','sensitivity','triggerDelay','sessionEndDelay','alertNoVisit','alertMaxDaily','alertMaxDuration'];
+const SETTING_KEYS=['apiKey','apiModel','notifMode','noEliminationSecs','discordWebhook','tgToken','tgChatId','sensitivity','triggerDelay','sessionEndDelay','alertNoVisit','alertMaxDaily','alertMaxDuration'];
 
 function loadSettings(){
-  return {apiKey:'',apiModel:'claude-haiku-3-5-20251001',discordWebhook:'',tgToken:'',tgChatId:'',sensitivity:15,triggerDelay:3,sessionEndDelay:45,alertNoVisit:24,alertMaxDaily:8,alertMaxDuration:15,...JSON.parse(localStorage.getItem('catmon_settings')||'{}')};
+  return {apiKey:'',apiModel:'claude-haiku-3-5-20251001',notifMode:'all',noEliminationSecs:90,discordWebhook:'',tgToken:'',tgChatId:'',sensitivity:15,triggerDelay:3,sessionEndDelay:45,alertNoVisit:24,alertMaxDaily:8,alertMaxDuration:15,...JSON.parse(localStorage.getItem('catmon_settings')||'{}')};
 }
 function saveSettings(){
   const s={};
@@ -879,6 +911,10 @@ function checkHealth(entry,s){
   if(entry.duration>s.alertMaxDuration*60)alerts.push({type:'warn',msg:`${lang==='zh'?'單次如廁時間 ':'Session '}${Math.round(entry.duration/60)}${t('dm')}${t('tooLong')}`});
   const lp=logs.find(l=>l.cat===entry.cat&&l.activity==='defecating');
   if(lp&&(now-new Date(lp.timestamp))/3600000>48)alerts.push({type:'alert',msg:`${entry.catName} ${t('noPoopSuffix')}`});
+  // No elimination alert: cat was in box but didn't urinate or defecate
+  const noElim=['investigating','covering','exiting','none'];
+  if(s.noEliminationSecs>0&&noElim.includes(entry.activity)&&entry.duration>=s.noEliminationSecs)
+    alerts.push({type:'alert',msg:`${entry.catName} ${t('noEliminationAlert')} (${Math.round(entry.duration/60)}${t('dm')})`});
   // Waste analysis health flags
   const wa=entry.wasteAnalysis;
   if(wa){
@@ -1026,9 +1062,57 @@ function buildMsg(entry,alerts){
 }
 
 async function sendNotifications(entry,s,alerts){
+  const mode=s.notifMode||'all';
+  // 'alerts' mode: only send if there are health alerts
+  if(mode==='alerts'&&!alerts.length)return;
+  // 'daily' mode: don't send per-visit, handled by daily summary scheduler
+  if(mode==='daily')return;
   const msg=buildMsg(entry,alerts);
+  await pushMsg(msg,s);
+}
+
+async function pushMsg(msg,s){
   if(s.discordWebhook){try{await fetch(s.discordWebhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:msg,username:'🐱 Cat Monitor'})});}catch(e){}}
   if(s.tgToken&&s.tgChatId){try{await fetch(`https://api.telegram.org/bot${s.tgToken}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:s.tgChatId,text:msg.replace(/\*\*/g,'*'),parse_mode:'Markdown'})});}catch(e){}}
+}
+
+function buildDailySummary(){
+  const s=loadSettings(),cats=getCats(),logs=getLogs();
+  const today=new Date().toDateString();
+  const tl=logs.filter(l=>new Date(l.timestamp).toDateString()===today);
+  if(!tl.length)return null;
+  let msg=`${t('dailySummaryTitle')} — ${new Date().toLocaleDateString(lang==='zh'?'zh-HK':'en-GB',{month:'short',day:'numeric'})}\n\n`;
+  cats.forEach(cat=>{
+    const cl=tl.filter(l=>l.cat===cat.id);if(!cl.length)return;
+    const pee=cl.filter(l=>l.activity==='urinating').length;
+    const poop=cl.filter(l=>l.activity==='defecating').length;
+    const noElim=cl.filter(l=>['investigating','none'].includes(l.activity)&&l.duration>=(s.noEliminationSecs||90)).length;
+    msg+=`🐱 **${cat.name||'?'}**: ${t('visitCount')} ${cl.length} | 💧${pee} 💩${poop}`;
+    if(noElim)msg+=` | ⚠️ ${t('noEliminationAlert')} x${noElim}`;
+    msg+='\n';
+  });
+  // Include any health alerts from today
+  const todayAlerts=tl.filter(l=>l.alerts?.length>0);
+  if(todayAlerts.length){
+    msg+=`\n⚠️ **${t('healthAlerts')}**\n`;
+    todayAlerts.forEach(l=>l.alerts.forEach(a=>msg+=`• ${l.catName}: ${a.msg}\n`));
+  }
+  return msg;
+}
+
+function scheduleDailySummary(){
+  const now=new Date(),target=new Date();
+  target.setHours(8,0,0,0);
+  if(now>=target)target.setDate(target.getDate()+1);
+  const ms=target-now;
+  setTimeout(async()=>{
+    const s=loadSettings();
+    if(s.notifMode==='daily'){
+      const msg=buildDailySummary();
+      if(msg)await pushMsg(msg,s);
+    }
+    scheduleDailySummary(); // reschedule for next day
+  },ms);
 }
 
 async function testDiscord(){const url=v('discordWebhook');if(!url){toast(t('discordFillAll'),'error');return;}try{await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:'✅ Cat Monitor test OK 🐱',username:'🐱 Cat Monitor'})});toast(t('discordOK'),'success');}catch(e){toast(t('discordFail'),'error');}}
@@ -1257,7 +1341,8 @@ function toast(msg,type=''){const e=document.getElementById('toast');e.textConte
 function init(){
   loadSettingsToForm();renderCatCards();renderLogFilter();renderRecentEvents();applyLang();
   if(loadSettings().apiKey)document.getElementById('setupOverlay').classList.add('hidden');
-  setInterval(()=>{const s=loadSettings();const a=generateHealthAlerts(getLogs(),s);if(a.length)sendNotifications({catName:'Health',cat:'none',activity:'none',duration:0,confidence:0,notes:'',timestamp:new Date().toISOString()},s,a);},6*3600000);
+  scheduleDailySummary();
+  setInterval(()=>{const s=loadSettings();const a=generateHealthAlerts(getLogs(),s);if(a.length)pushMsg(buildMsg({catName:'',cat:'none',activity:'none',duration:0,confidence:0,notes:'',timestamp:new Date().toISOString()},a).replace(/^.*?\n/,'⏰ Health Check\n'),s);},6*3600000);
 }
 init();
 </script>
