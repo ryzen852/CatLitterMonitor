@@ -341,7 +341,8 @@ nav button.active{color:var(--teal);border-bottom-color:var(--teal)}
   </div>
 
   <button class="btn primary" style="width:100%;margin-bottom:8px" onclick="saveSettings()" id="saveBtn">💾 儲存設定</button>
-  <button class="btn" style="width:100%" onclick="exportLogs()" id="exportBtn">📤 匯出記錄 (JSON)</button>
+  <button class="btn" style="width:100%;margin-bottom:8px" onclick="exportData()" id="exportBtn">📤 匯出完整備份 (JSON)</button>
+  <label class="btn" style="width:100%;display:block;text-align:center;cursor:pointer;box-sizing:border-box" id="importBtn">📥 匯入備份 (JSON)<input type="file" accept=".json,application/json" style="display:none" onchange="importData(this)"></label>
 </div>
 
 </div>
@@ -388,7 +389,7 @@ const STRINGS = {
     alertNoVisitLabel:'多少小時無記錄發警告（0 = 停用）',
     alertMaxDailyLabel:'每日如廁次數上限（超過發警告）',
     alertMaxDurLabel:'單次如廁最長時間警告（分鐘）',
-    saveBtn:'💾 儲存設定',exportBtn:'📤 匯出記錄 (JSON)',
+    saveBtn:'💾 儲存設定',exportBtn:'📤 匯出完整備份 (JSON)',importBtn:'📥 匯入備份 (JSON)',importSuccess:'✅ 備份已匯入',importError:'❌ 檔案無效或格式錯誤',importConfirm:'匯入備份會覆蓋現有所有設定及記錄，確定繼續？',
     filterAll:'全部',filterPee:'尿尿',filterPoop:'大便',filterAlert:'⚠️ 警告',
     todayCount:'今日次數',weekPee:'本週尿',weekPoop:'本週便',
     weekTotal:'本週總記錄',allTotal:'全部記錄',lastVisit:'上次：',noLog:'無記錄',
@@ -470,7 +471,7 @@ const STRINGS = {
     alertNoVisitLabel:'Hours without visit before alert (0 = off)',
     alertMaxDailyLabel:'Max daily visits before alert',
     alertMaxDurLabel:'Max session duration alert (minutes)',
-    saveBtn:'💾 Save Settings',exportBtn:'📤 Export Logs (JSON)',
+    saveBtn:'💾 Save Settings',exportBtn:'📤 Export Full Backup (JSON)',importBtn:'📥 Import Backup (JSON)',importSuccess:'✅ Backup imported',importError:'❌ Invalid file or format',importConfirm:'Importing will overwrite all current settings and records. Continue?',
     filterAll:'All',filterPee:'Pee',filterPoop:'Poop',filterAlert:'⚠️ Alerts',
     todayCount:"Today",weekPee:'Pee /wk',weekPoop:'Poop /wk',
     weekTotal:'This Week',allTotal:'All Records',lastVisit:'Last: ',noLog:'No records',
@@ -549,6 +550,12 @@ function applyLang() {
     if(key==='hdrTitle')el.innerHTML=t(key);
     else el.textContent=t(key);
   });
+  // importBtn is a <label> — update only its text node, not the hidden input inside
+  const importBtnEl=document.getElementById('importBtn');
+  if(importBtnEl){
+    const tn=Array.from(importBtnEl.childNodes).find(n=>n.nodeType===3);
+    if(tn)tn.textContent=t('importBtn');
+  }
   // Update cam overlay/status only when camera is not running
   if(!stream){
     const ov=document.getElementById('camOverlay');if(ov)ov.textContent=t('camStandby');
@@ -738,7 +745,47 @@ function getLogs(){return JSON.parse(localStorage.getItem('catmon_logs')||'[]');
 function saveLogs(logs){localStorage.setItem('catmon_logs',JSON.stringify(logs.slice(0,500)));}
 function addLog(entry){const logs=getLogs();logs.unshift({...entry,id:Date.now()});saveLogs(logs);renderRecentEvents();renderLog();renderStats();}
 function clearAllLogs(){if(!confirm(t('logsClearConfirm')))return;localStorage.removeItem('catmon_logs');renderRecentEvents();renderLog();renderStats();toast(t('logsCleared'));}
-function exportLogs(){const blob=new Blob([JSON.stringify(getLogs(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`catmon_${new Date().toISOString().slice(0,10)}.json`;a.click();}
+function exportData(){
+  const cats=getCats();
+  const photos={};
+  cats.forEach(c=>{const p=localStorage.getItem('catmon_photo_'+c.id);if(p)photos[c.id]=p;});
+  const backup={
+    version:2,
+    exportedAt:new Date().toISOString(),
+    logs:getLogs(),
+    settings:loadSettings(),
+    cats:cats,
+    photos:photos
+  };
+  const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`catmon_backup_${new Date().toISOString().slice(0,10)}.json`;a.click();
+}
+
+function importData(input){
+  const file=input.files[0];if(!file)return;
+  if(!confirm(t('importConfirm'))){input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      // Support both v2 full backup and legacy logs-only array
+      if(Array.isArray(data)){
+        // Legacy: just logs array
+        saveLogs(data);
+      }else if(data.version===2||data.logs){
+        if(data.logs)saveLogs(data.logs);
+        if(data.settings)localStorage.setItem('catmon_settings',JSON.stringify(data.settings));
+        if(data.cats)saveCats(data.cats);
+        if(data.photos)Object.entries(data.photos).forEach(([id,p])=>localStorage.setItem('catmon_photo_'+id,p));
+      }else{throw new Error('unknown format');}
+      loadSettingsToForm();renderCatCards();renderLogFilter();renderRecentEvents();renderLog();renderStats();
+      toast(t('importSuccess'),'success');
+    }catch(err){toast(t('importError'),'error');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
 
 // ═══════════════════════════════════════
 // CAMERA & MOTION
