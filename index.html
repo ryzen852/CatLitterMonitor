@@ -539,7 +539,8 @@ function applyLang() {
   // Elements with hyphenated IDs that don't match STRINGS keys
   const hyphenMap = {
     'so-title':'soTitle', 'so-desc':'soDesc', 'so-go':'soGo', 'so-skip':'soSkip',
-    'hdr-title':'hdrTitle'
+    'hdr-title':'hdrTitle',
+    'tab-monitor':'tabMonitor', 'tab-log':'tabLog', 'tab-stats':'tabStats', 'tab-settings':'tabSettings'
   };
   Object.entries(hyphenMap).forEach(([id,key])=>{
     const el=document.getElementById(id);
@@ -550,6 +551,11 @@ function applyLang() {
   document.getElementById('langBtn').textContent = lang==='zh'?'EN':'中';
   const soLangBtn=document.getElementById('soLangBtn');
   if(soLangBtn)soLangBtn.textContent=lang==='zh'?'EN':'中';
+  // English title needs heavier weight + tighter spacing to compensate for narrower glyphs
+  const h1=document.querySelector('header h1');
+  if(h1){h1.style.fontWeight=lang==='zh'?'800':'bold';h1.style.letterSpacing=lang==='zh'?'-.5px':'-.3px';}
+  const h2=document.querySelector('#setupOverlay h2');
+  if(h2){h2.style.fontWeight=lang==='zh'?'800':'bold';}
   document.title = '🐱 ' + t('appTitle');
   // Translate select options
   const optMap={notifAllOpt:'notifAll',notifEverythingOpt:'notifEverything',notifAlertsOpt:'notifAlertsOnly',notifDailyOpt:'notifDaily'};
