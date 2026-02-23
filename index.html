@@ -529,7 +529,8 @@ const t = k => STRINGS[lang][k] || STRINGS.zh[k] || k;
 
 function applyLang() {
   // Elements whose IDs match STRINGS keys exactly
-  const ids = Object.keys(STRINGS.zh).filter(k => document.getElementById(k));
+  const skipIds = new Set(['importBtn']);
+  const ids = Object.keys(STRINGS.zh).filter(k => document.getElementById(k) && !skipIds.has(k));
   ids.forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
