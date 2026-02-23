@@ -629,7 +629,16 @@ let isInSession=false,motionStartTime=null,wakeLock=null;
 let sessionStartTime=null,sessionApiCalls=[],lastAnalyzeTime=0;
 let prevFrame=null,motionCanvas=null,motionCtx=null;
 let roi=null,isDrawingROI=false,roiStart=null;
-const ANALYZE_INTERVAL_MS=18000;
+// Smart capture — 3 shots per session:
+// [1] Entry shot: 3s after session starts (cat just stepped in, most visible)
+// [2] Drop shot: motion drops sharply → cat likely squatting to eliminate
+// [3] Final shot: just before session ends (captures covering behaviour)
+let entryFrameDone=false;   // shot 1 fired?
+let dropFrameDone=false;    // shot 2 fired?
+let sessionPeakPct=0;       // rolling peak within current active burst
+let recentPcts=[];          // last N readings for smoothing
+const DROP_THRESHOLD=22;    // pct-point drop to signal squat
+const SMOOTH_N=4;           // smooth over 4 ticks = 2 seconds
 
 async function startCamera(){
   const s=loadSettings();
@@ -679,22 +688,53 @@ function detectMotion(){
     count++;
   }
   const pct=count>0?Math.min(100,Math.round(diff/count/2.55)):0;
-  prevFrame=frame;updateMotionMeter(pct);handleMotionState(pct>=s.sensitivity,s);
+  prevFrame=frame;
+  // Smooth pct over last SMOOTH_N readings
+  recentPcts.push(pct);if(recentPcts.length>SMOOTH_N)recentPcts.shift();
+  const smoothed=Math.round(recentPcts.reduce((a,b)=>a+b,0)/recentPcts.length);
+  updateMotionMeter(smoothed);
+  handleMotionState(smoothed,s.sensitivity,s);
 }
 
-function handleMotionState(hasMotion,s){
+function handleMotionState(smoothedPct,threshold,s){
   const now=Date.now();
+  const hasMotion=smoothedPct>=threshold;
+
   if(hasMotion){
     setStatusDot('motion');
     if(!motionStartTime)motionStartTime=now;
     if(sessionEndTimer){clearTimeout(sessionEndTimer);sessionEndTimer=null;}
+
+    // Trigger session once motion sustained >= triggerDelay
     const elapsed=(now-motionStartTime)/1000;
     if(elapsed>=s.triggerDelay&&!isInSession)startSession();
-    if(isInSession&&(now-lastAnalyzeTime)>ANALYZE_INTERVAL_MS){analyzeFrame();lastAnalyzeTime=now;}
+
+    // Track peak pct for drop detection
+    if(isInSession)sessionPeakPct=Math.max(sessionPeakPct,smoothedPct);
+
   }else{
     setStatusDot(stream?'active':'');
-    if(isInSession&&!sessionEndTimer)sessionEndTimer=setTimeout(()=>endSession(false),s.sessionEndDelay*1000);
+    if(isInSession&&!sessionEndTimer)
+      sessionEndTimer=setTimeout(()=>endSession(false),s.sessionEndDelay*1000);
     if(!isInSession)motionStartTime=null;
+  }
+
+  if(!isInSession)return;
+
+  // ── SHOT 1: Entry frame, 3s after session starts ──
+  if(!entryFrameDone&&(now-sessionStartTime.getTime())>=3000){
+    analyzeFrame('entry');entryFrameDone=true;lastAnalyzeTime=now;
+  }
+
+  // ── SHOT 2: Drop frame — motion fell sharply from peak (squat moment) ──
+  // Conditions: entry done, drop not yet fired, peak was meaningfully high,
+  // and current smoothed is well below that peak
+  if(entryFrameDone&&!dropFrameDone&&sessionPeakPct>=(threshold+10)){
+    const drop=sessionPeakPct-smoothedPct;
+    if(drop>=DROP_THRESHOLD&&(now-lastAnalyzeTime)>4000){
+      analyzeFrame('drop');dropFrameDone=true;lastAnalyzeTime=now;
+      sessionPeakPct=0; // reset so we can detect a second burst if cat investigates more
+    }
   }
 }
 
@@ -703,6 +743,8 @@ function handleMotionState(hasMotion,s){
 // ═══════════════════════════════════════
 function startSession(){
   isInSession=true;sessionStartTime=new Date();sessionApiCalls=[];lastAnalyzeTime=0;
+  // Reset smart capture flags for this new session
+  entryFrameDone=false;dropFrameDone=false;sessionPeakPct=0;recentPcts=[];
   document.getElementById('sessionCard').classList.add('visible');
   document.getElementById('sessionStart').textContent=formatTime(sessionStartTime);
   document.getElementById('sessionCatName').textContent='...';
@@ -710,7 +752,7 @@ function startSession(){
   document.getElementById('sessionConf').textContent='—';
   sessionTimerInterval=setInterval(updateSessionDuration,1000);
   setCamStatus(t('inSession'),'in-session');setOverlay(t('inSession'));
-  analyzeFrame();lastAnalyzeTime=Date.now();
+  // Shot 1 will fire automatically in handleMotionState after 3s
 }
 
 function updateSessionDuration(){
@@ -726,8 +768,9 @@ async function endSession(aborted){
   motionStartTime=null;
   document.getElementById('sessionCard').classList.remove('visible');
   setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
-  if(aborted||!sessionApiCalls.length)return;
-  if((Date.now()-lastAnalyzeTime)>5000)await analyzeFrame();
+  if(aborted||!sessionApiCalls.length&&!entryFrameDone)return;
+  // Shot 3: final frame — captures covering/exit behaviour
+  await analyzeFrame('final');
   const duration=Math.round((Date.now()-sessionStartTime)/1000);
   const result=aggregateSession(sessionApiCalls);
   if(!result.catPresent)return;
@@ -767,7 +810,7 @@ function checkHealth(entry,s){
 // ═══════════════════════════════════════
 // CLAUDE API
 // ═══════════════════════════════════════
-async function analyzeFrame(){
+async function analyzeFrame(shotType='manual'){
   const s=loadSettings();if(!s.apiKey)return;
   const video=document.getElementById('videoEl');if(!video.videoWidth)return;
   setCamStatus(t('analyzing'),'analyzing');
@@ -785,14 +828,24 @@ async function analyzeFrame(){
   const content=[];
   for(const c of cats){const ref=getRefPhoto(c.id);if(ref){content.push({type:'text',text:`Reference photo of ${c.name||c.id}:`});content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:ref}});}}
   const hasRefs=cats.some(c=>getRefPhoto(c.id));
-  const prompt=`You are monitoring a cat litter box. Identify which cat is present.
+  // Shot-specific context hint for Claude
+  const shotHint={
+    entry:'This is the ENTRY SHOT — cat has just stepped into the litter box. Focus on identification.',
+    drop:'This is the SQUAT SHOT — motion just dropped sharply, cat is likely in elimination posture. Look carefully for urination or defecation stance.',
+    final:'This is the FINAL SHOT — cat is about to leave or covering waste. Note any covering behaviour. Use the full session to infer activity type.',
+    manual:'General analysis.'
+  }[shotType]||'General analysis.';
+
+  const prompt=`You are monitoring a cat litter box. Identify which cat is present and what they are doing.
+
+SHOT CONTEXT: ${shotHint}
 
 CATS:
 ${catDesc}
 
 ${hasRefs?'Reference photos provided above. Use for direct visual comparison.':'No reference photos — use written descriptions only.'}
 
-STEPS:
+IDENTIFICATION STEPS:
 1. Is litter box visible in the LIVE IMAGE?
 2. Is any cat present?
 3. If yes: compare against references + descriptions (size, coat, markings, face, ears, unique features)
