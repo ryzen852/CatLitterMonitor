@@ -1115,7 +1115,7 @@ Respond ONLY with valid JSON, no markdown:
   content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:liveB64}});
   content.push({type:'text',text:prompt});
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':s.apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:s.apiModel,max_tokens:700,messages:[{role:'user',content}]})});
+    const resp=await fetch('https://catmon-proxy.ryzen852.workers.dev',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':s.apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:s.apiModel,max_tokens:700,messages:[{role:'user',content}]})});
     if(!resp.ok){
       let errMsg;
       if(resp.status===401)errMsg=t('apiErr401');
