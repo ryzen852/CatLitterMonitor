@@ -251,8 +251,8 @@ nav button.active{color:var(--teal);border-bottom-color:var(--teal)}
     <div class="field">
       <label id="modelLabel">Claude 模型</label>
       <select id="apiModel">
-        <option value="claude-haiku-3-5-20251001" id="modelHaikuOpt">claude-haiku-3-5（~$0.40/週，推薦）</option>
-        <option value="claude-sonnet-4-5-20251022" id="modelSonnetOpt">claude-sonnet-4-5（~$1.50/週，更準）</option>
+        <option value="claude-haiku-4-5-20251001" id="modelHaikuOpt">claude-haiku-4-5（~$0.40/週，推薦）</option>
+        <option value="claude-sonnet-4-6" id="modelSonnetOpt">claude-sonnet-4-6（~$1.50/週，更準）</option>
       </select>
     </div>
   </div>
@@ -370,7 +370,7 @@ const STRINGS = {
     recentTitle:'最近記錄',noRecordsMsg:'尚無記錄',logEmptyMsg:'記錄會在貓貓使用廁所後出現',
     statsEmptyMsg:'收集到記錄後會顯示統計',clearLogsBtn:'清除所有記錄',
     sectionAPI:'🔑 API 設定',apiKeyLabel:'Claude API Key',modelLabel:'Claude 模型',
-    modelHaikuOpt:'claude-haiku-3-5（~$0.40/週，推薦）',modelSonnetOpt:'claude-sonnet-4-5（~$1.50/週，更準）',
+    modelHaikuOpt:'claude-haiku-4-5（~$0.40/週，推薦）',modelSonnetOpt:'claude-sonnet-4-6（~$1.50/週，更準）',
     sectionCats:'🐱 貓貓識別資料',
     idTip:'<strong>識別準確度：</strong>上載清晰參考相 + 填寫品種 + 描述獨特特徵<br>若真係分唔清，會記為「未知」，唔會亂估',
     addCatBtn:'＋ 新增貓貓',catNamePH:'貓貓名字',breedPH:'選擇品種',
@@ -452,7 +452,7 @@ const STRINGS = {
     recentTitle:'Recent',noRecordsMsg:'No records yet',logEmptyMsg:'Records appear after litter box visits',
     statsEmptyMsg:'Stats appear once records are collected',clearLogsBtn:'Clear All Logs',
     sectionAPI:'🔑 API Settings',apiKeyLabel:'Claude API Key',modelLabel:'Claude Model',
-    modelHaikuOpt:'claude-haiku-3-5 (~$0.40/week, recommended)',modelSonnetOpt:'claude-sonnet-4-5 (~$1.50/week, more accurate)',
+    modelHaikuOpt:'claude-haiku-4-5 (~$0.40/week, recommended)',modelSonnetOpt:'claude-sonnet-4-6 (~$1.50/week, more accurate)',
     sectionCats:'🐱 Cat Profiles',
     idTip:'<strong>Identification accuracy:</strong> Upload a clear reference photo + select breed + describe unique features.<br>If unsure, records as "unknown" — never guesses.',
     addCatBtn:'＋ Add Cat',catNamePH:"Cat's name",breedPH:'Select breed',
@@ -724,7 +724,7 @@ function getRefPhoto(catId){
 const SETTING_KEYS=['apiKey','apiModel','notifMode','noEliminationSecs','discordWebhook','tgToken','tgChatId','sensitivity','triggerDelay','sessionEndDelay','alertNoVisit','alertMaxDaily','alertMaxDuration'];
 
 function loadSettings(){
-  return {apiKey:'',apiModel:'claude-haiku-3-5-20251001',notifMode:'all',noEliminationSecs:90,discordWebhook:'',tgToken:'',tgChatId:'',sensitivity:15,triggerDelay:3,sessionEndDelay:45,alertNoVisit:24,alertMaxDaily:8,alertMaxDuration:15,...JSON.parse(localStorage.getItem('catmon_settings')||'{}')};
+  return {apiKey:'',apiModel:'claude-haiku-4-5-20251001',notifMode:'all',noEliminationSecs:90,discordWebhook:'',tgToken:'',tgChatId:'',sensitivity:15,triggerDelay:3,sessionEndDelay:45,alertNoVisit:24,alertMaxDaily:8,alertMaxDuration:15,...JSON.parse(localStorage.getItem('catmon_settings')||'{}')};
 }
 function saveSettings(){
   const s={};
@@ -1115,7 +1115,7 @@ Respond ONLY with valid JSON, no markdown:
   content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:liveB64}});
   content.push({type:'text',text:prompt});
   try{
-    const resp=await fetch('https://catmon-proxy.ryzen852.workers.dev',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':s.apiKey,'anthropic-version':'2023-06-01'},body:JSON.stringify({model:s.apiModel,max_tokens:700,messages:[{role:'user',content}]})});
+    const resp=await fetch('https://catmon-proxy.YOUR_NAME.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({__apiKey:s.apiKey,model:s.apiModel,max_tokens:700,messages:[{role:'user',content}]})});
     if(!resp.ok){
       let errMsg;
       if(resp.status===401)errMsg=t('apiErr401');
