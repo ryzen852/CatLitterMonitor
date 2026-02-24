@@ -713,7 +713,9 @@ function handlePhotoUpload(catId,input){
         if(th){
           th.querySelectorAll('.pi,.pl').forEach(e=>e.style.display='none');
           const ex=th.querySelector('img');if(ex)ex.remove();
-          const el=document.createElement('img');el.src=b64;th.appendChild(el);
+          const el=document.createElement('img');el.src=b64;
+          const fi=th.querySelector('input[type=file]');
+          fi?th.insertBefore(el,fi):th.appendChild(el);
         }
         toast(t('photoSaved'),'success');
       }catch(e){toast(t('photoTooLarge'),'error');}
@@ -1068,8 +1070,9 @@ async function analyzeFrame(shotType='manual'){
   }).join('\n\n');
   const catIds=cats.map(c=>`"${c.id}"`).join(' or ');
   const content=[];
-  for(const c of cats){const ref=getRefPhoto(c.id);if(ref){content.push({type:'text',text:`Reference photo of ${c.name||c.id}:`});content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:ref}});}}
-  const hasRefs=cats.some(c=>getRefPhoto(c.id));
+  const sendRefs=cats.length>1;
+  if(sendRefs){for(const c of cats){const ref=getRefPhoto(c.id);if(ref){content.push({type:'text',text:`Reference photo of ${c.name||c.id}:`});content.push({type:'image',source:{type:'base64',media_type:'image/jpeg',data:ref}});}}}
+  const hasRefs=sendRefs&&cats.some(c=>getRefPhoto(c.id));
   // Shot-specific context hint for Claude
   const doWaste = (shotType==='drop'||shotType==='presence_check');
   const shotHint={
