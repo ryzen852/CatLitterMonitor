@@ -251,8 +251,8 @@ nav button.active{color:var(--teal);border-bottom-color:var(--teal)}
     <div class="field">
       <label id="modelLabel">Claude 模型</label>
       <select id="apiModel">
-        <option value="claude-haiku-4-5-20251001" id="modelHaikuOpt">claude-haiku-4-5（~$0.40/週，推薦）</option>
-        <option value="claude-sonnet-4-6" id="modelSonnetOpt">claude-sonnet-4-6（~$1.50/週，更準）</option>
+        <option value="claude-haiku-4-5-20251001" id="modelHaikuOpt">claude-haiku-4-5（~$0.80/週，推薦）</option>
+        <option value="claude-sonnet-4-6" id="modelSonnetOpt">claude-sonnet-4-6（~$2.50/週，更準）</option>
       </select>
     </div>
   </div>
@@ -370,7 +370,7 @@ const STRINGS = {
     recentTitle:'最近記錄',noRecordsMsg:'尚無記錄',logEmptyMsg:'記錄會在貓貓使用廁所後出現',
     statsEmptyMsg:'收集到記錄後會顯示統計',clearLogsBtn:'清除所有記錄',
     sectionAPI:'🔑 API 設定',apiKeyLabel:'Claude API Key',modelLabel:'Claude 模型',
-    modelHaikuOpt:'claude-haiku-4-5（~$0.40/週，推薦）',modelSonnetOpt:'claude-sonnet-4-6（~$1.50/週，更準）',
+    modelHaikuOpt:'claude-haiku-4-5（~$0.80/週，推薦）',modelSonnetOpt:'claude-sonnet-4-6（~$2.50/週，更準）',
     sectionCats:'🐱 貓貓識別資料',
     idTip:'<strong>識別準確度：</strong>上載清晰參考相 + 填寫品種 + 描述獨特特徵<br>若真係分唔清，會記為「未知」，唔會亂估',
     addCatBtn:'＋ 新增貓貓',catNamePH:'貓貓名字',breedPH:'選擇品種',
@@ -452,7 +452,7 @@ const STRINGS = {
     recentTitle:'Recent',noRecordsMsg:'No records yet',logEmptyMsg:'Records appear after litter box visits',
     statsEmptyMsg:'Stats appear once records are collected',clearLogsBtn:'Clear All Logs',
     sectionAPI:'🔑 API Settings',apiKeyLabel:'Claude API Key',modelLabel:'Claude Model',
-    modelHaikuOpt:'claude-haiku-4-5 (~$0.40/week, recommended)',modelSonnetOpt:'claude-sonnet-4-6 (~$1.50/week, more accurate)',
+    modelHaikuOpt:'claude-haiku-4-5 (~$0.80/week, recommended)',modelSonnetOpt:'claude-sonnet-4-6 (~$2.50/week, more accurate)',
     sectionCats:'🐱 Cat Profiles',
     idTip:'<strong>Identification accuracy:</strong> Upload a clear reference photo + select breed + describe unique features.<br>If unsure, records as "unknown" — never guesses.',
     addCatBtn:'＋ Add Cat',catNamePH:"Cat's name",breedPH:'Select breed',
@@ -557,10 +557,18 @@ function applyLang() {
     const tn=Array.from(importBtnEl.childNodes).find(n=>n.nodeType===3);
     if(tn)tn.textContent=t('importBtn');
   }
-  // Update cam overlay/status only when camera is not running
+  // Update cam overlay/status — map current state to new language
+  const ov=document.getElementById('camOverlay');
+  const cs=document.getElementById('camStatus');
   if(!stream){
-    const ov=document.getElementById('camOverlay');if(ov)ov.textContent=t('camStandby');
-    const cs=document.getElementById('camStatus');if(cs){cs.textContent=t('camNotStarted');cs.className='cam-status';}
+    if(ov)ov.textContent=t('camStandby');
+    if(cs){cs.textContent=t('camNotStarted');cs.className='cam-status';}
+  } else if(isInSession){
+    if(ov)ov.textContent=t('inSession');
+    if(cs){cs.textContent=t('inSession');cs.className='cam-status in-session';}
+  } else {
+    if(ov)ov.textContent=t('monitoring');
+    if(cs){cs.textContent=t('monitoring');cs.className='cam-status';}
   }
   document.getElementById('langBtn').textContent = lang==='zh'?'EN':'中';
   const soLangBtn=document.getElementById('soLangBtn');
