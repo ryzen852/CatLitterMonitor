@@ -969,16 +969,18 @@ async function finalizeSession(){
   motionStartTime=null;
   document.getElementById('sessionCard').classList.remove('visible');
   setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
-  if(!sessionApiCalls.length)return;
   const duration=Math.round((Date.now()-sessionStartTime)/1000);
   const result=aggregateSession(sessionApiCalls);
   const s=loadSettings();
   if(!result.catPresent){
-    // 'everything' mode: notify even when no cat detected
+    const noCatEntry={timestamp:sessionStartTime.toISOString(),endTimestamp:new Date().toISOString(),duration,cat:'none',catName:'__noCat__',activity:'none',confidence:0,notes:'',identBasis:'',wasteAnalysis:null,alerts:[]};
+    addLog(noCatEntry);
+    toast(t('noCatDetected'),'');
     if(s.notifMode==='everything'){
       const time=new Date(sessionStartTime).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
       const dur=duration<60?duration+t('ds'):Math.round(duration/60)+t('dm');
-      await pushMsg(`👻 ${t('noCatDetected')}\n🕐 ${time} ｜ ⏱ ${dur}`,s);
+      await pushMsg(`👻 ${t('noCatDetected')}
+🕐 ${time} ｜ ⏱ ${dur}`,s);
     }
     return;
   }
