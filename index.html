@@ -703,6 +703,7 @@ function handlePhotoUpload(catId,input){
   const reader=new FileReader();
   reader.onload=e=>{
     const img=new Image();
+    img.onerror=()=>{toast('❌ 相片格式不支援，請轉為 JPG/PNG（HEIF/HEVC 唔得）','error');};
     img.onload=()=>{
       const MAX=512,scale=Math.min(1,MAX/Math.max(img.width,img.height));
       const canvas=document.createElement('canvas');
