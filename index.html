@@ -568,6 +568,17 @@ function applyLang() {
   } else if(isInSession){
     if(ov)ov.textContent=t('inSession');
     if(cs){cs.textContent=t('inSession');cs.className='cam-status in-session';}
+    // Re-translate live session card text
+    const lastCall=sessionApiCalls[sessionApiCalls.length-1];
+    if(lastCall){
+      const unk=lastCall.cat_identity==='unknown'||lastCall.cat_identity==='none';
+      const sn=document.getElementById('sessionCatName');
+      if(sn)sn.textContent=unk?t('actUnknown'):getCatName(lastCall.cat_identity);
+      const sa=document.getElementById('sessionActivity');
+      if(sa)sa.textContent=translateActivity(lastCall.activity);
+    }
+    const sal=document.getElementById('sessionActiveLabel');
+    if(sal)sal.textContent=t('sessionActiveLabel');
   } else {
     if(ov)ov.textContent=t('monitoring');
     if(cs){cs.textContent=t('monitoring');cs.className='cam-status';}
@@ -1166,7 +1177,7 @@ Respond ONLY with valid JSON, no markdown:
 
 function translateActivity(act){
   const m={urinating:t('actPee'),defecating:t('actPoop'),investigating:t('actInvestigate'),covering:t('actCover'),exiting:t('actExit'),none:t('actNone'),unclear:t('actUnknown')};
-  return m[act]||t('actUnknown');
+  return m[(act||'').toLowerCase()]||t('actUnknown');
 }
 
 // ═══════════════════════════════════════
