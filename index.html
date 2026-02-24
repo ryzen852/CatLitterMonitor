@@ -709,14 +709,7 @@ function handlePhotoUpload(catId,input){
       const b64=canvas.toDataURL('image/jpeg',.75);
       try{
         localStorage.setItem('catmon_photo_'+catId,b64);
-        const th=document.getElementById('thumb_'+catId);
-        if(th){
-          th.querySelectorAll('.pi,.pl').forEach(e=>e.style.display='none');
-          const ex=th.querySelector('img');if(ex)ex.remove();
-          const el=document.createElement('img');el.src=b64;
-          const fi=th.querySelector('input[type=file]');
-          fi?th.insertBefore(el,fi):th.appendChild(el);
-        }
+        renderCatCards();
         toast(t('photoSaved'),'success');
       }catch(e){toast(t('photoTooLarge'),'error');}
     };
