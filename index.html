@@ -438,7 +438,8 @@ const STRINGS = {
     noEliminationLabel:'異常探訪警告：貓咪停留多少秒但冇排泄（0 = 停用）',
     noEliminationHint:'建議 90 秒。貓入砂盆卻冇尿冇便可能係尿道阻塞等緊急情況',
     noEliminationAlert:'⚠️ 入砂盆但冇排泄',
-    dailySummaryTitle:'📊 每日如廁摘要',visitCount:'如廁次數',peeCount:'尿',poopCount:'便'
+    dailySummaryTitle:'📊 每日如廁摘要',visitCount:'如廁次數',peeCount:'尿',poopCount:'便',
+    evtMonitorStart:'📷 監察已啟動',evtMonitorStop:'⏹ 監察已停止',evtSessionStart:'🔴 Session 開始',evtSessionAborted:'⚠️ Session 中止（手動停止）'
   },
   en: {
     appTitle:'Cat Litter Monitor',hdrTitle:'Cat <span>Litter</span> Monitor',
@@ -520,7 +521,8 @@ const STRINGS = {
     noEliminationLabel:'No-elimination alert: seconds in box without output (0 = off)',
     noEliminationHint:'Recommended 90s. Cat in box with no output may indicate urinary blockage or obstruction.',
     noEliminationAlert:'⚠️ In box but no elimination',
-    dailySummaryTitle:'📊 Daily Litter Summary',visitCount:'Visits',peeCount:'Pee',poopCount:'Poop'
+    dailySummaryTitle:'📊 Daily Litter Summary',visitCount:'Visits',peeCount:'Pee',poopCount:'Poop',
+    evtMonitorStart:'📷 Monitoring started',evtMonitorStop:'⏹ Monitoring stopped',evtSessionStart:'🔴 Session started',evtSessionAborted:'⚠️ Session aborted (manual stop)'
   }
 };
 
@@ -825,6 +827,7 @@ async function startCamera(){
     document.getElementById('btnStop').disabled=false;
     setStatusDot('active');setOverlay(t('monitoring'));
     setupROICanvas();startMotionDetection();acquireWakeLock();
+    const _ss=loadSettings();pushMsg(t('evtMonitorStart'),_ss);
     if(!roi){roi={x:.2,y:.2,w:.6,h:.6};drawROI();}
   }catch(e){toast(t('camError')+': '+e.message,'error');}
 }
@@ -836,6 +839,7 @@ function stopCamera(){
   document.getElementById('btnStart').disabled=false;
   document.getElementById('btnStop').disabled=true;
   setStatusDot('');setOverlay(t('camStandby'));setCamStatus(t('camNotStarted'),'');
+  const _sp=loadSettings();pushMsg(t('evtMonitorStop'),_sp);
   if(isInSession)endSession(true);prevFrame=null;
 }
 
@@ -926,6 +930,7 @@ function startSession(){
   document.getElementById('sessionConf').textContent='—';
   sessionTimerInterval=setInterval(updateSessionDuration,1000);
   setCamStatus(t('inSession'),'in-session');setOverlay(t('inSession'));
+  const _sl=loadSettings();const _st=formatTime(sessionStartTime);pushMsg(t('evtSessionStart')+' — '+_st,_sl);
   // Shot 1 fires automatically in handleMotionState after 3s
 }
 
@@ -989,7 +994,7 @@ async function endSession(aborted){
   motionStartTime=null;
   document.getElementById('sessionCard').classList.remove('visible');
   setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
-  if(!aborted&&sessionApiCalls.length)finalizeSession();
+  if(sessionApiCalls.length)finalizeSession();
 }
 
 function aggregateSession(calls){
