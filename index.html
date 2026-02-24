@@ -995,7 +995,7 @@ async function endSession(aborted){
   motionStartTime=null;
   document.getElementById('sessionCard').classList.remove('visible');
   setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
-  if(sessionApiCalls.length)finalizeSession();
+  if(sessionApiCalls.length)await finalizeSession();
 }
 
 function aggregateSession(calls){
@@ -1306,12 +1306,13 @@ function renderRecentEvents(){
 
 function eventItemHTML(l){
   const color=getCatColor(l.cat);
+  const catNameDisplay=l.catName==='__noCat__'?t('noCatDetected'):l.catName;
   const bc=l.activity==='urinating'?'pee':l.activity==='defecating'?'poop':'visit';
   const dur=l.duration<60?l.duration+t('ds'):Math.round(l.duration/60)+t('dm');
   return `<div class="event-item">
     <div class="cat-dot" style="background:${color}"></div>
     <div class="event-body">
-      <div class="event-title">${l.catName} · ${translateActivity(l.activity)}</div>
+      <div class="event-title">${catNameDisplay} · ${translateActivity(l.activity)}</div>
       <div class="event-sub">${dur} · ${t('confidenceLabel')} ${l.confidence}%</div>
     </div>
     ${l.alerts?.length?'<span class="badge alert">⚠️</span>':''}
@@ -1366,6 +1367,7 @@ function wasteAnalysisHTML(wa){
 
 function logEntryHTML(l){
   const color=getCatColor(l.cat);
+  const catNameDisplay=l.catName==='__noCat__'?t('noCatDetected'):l.catName;
   const time=new Date(l.timestamp).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
   const dur=l.duration<60?l.duration+t('ds'):Math.round(l.duration/60)+t('dm');
   const bc=l.activity==='urinating'?'pee':l.activity==='defecating'?'poop':'visit';
@@ -1373,7 +1375,7 @@ function logEntryHTML(l){
   return `<div class="log-entry">
     <div class="log-entry-header">
       <div class="cat-dot" style="background:${color}"></div>
-      <strong style="font-size:13px;color:var(--text-bright)">${l.catName}</strong>
+      <strong style="font-size:13px;color:var(--text-bright)">${catNameDisplay}</strong>
       <span class="badge ${bc}">${translateActivity(l.activity)}</span>
       <span style="margin-left:auto;font-size:11px;color:var(--text-dim)">${time}</span>
     </div>
