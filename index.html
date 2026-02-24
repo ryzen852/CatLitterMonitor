@@ -632,11 +632,13 @@ function breedOptions(sel) {
 function buildCatCard(cat, idx) {
   const photo = localStorage.getItem(`catmon_photo_${cat.id}`);
   const thumbImg = photo ? `<img src="${photo}" alt="">` : `<span class="pi">📷</span><span class="pl">${t('photoLabel')}</span>`;
+  const breedIdx=BREEDS.zh.indexOf(cat.breed);
+  const breedDisplay=breedIdx>0?BREEDS[lang][breedIdx].split(' ')[0]:'';
   return `<div class="cat-card" id="card_${cat.id}">
     <div class="cat-card-header" onclick="toggleCatCard('${cat.id}')">
       <div class="cat-dot" style="background:${cat.colorDot};width:12px;height:12px;border-radius:50%"></div>
       <div class="cat-name-display">${cat.name||'('+t('catNamePH')+')'}</div>
-      <div class="cat-breed-display">${cat.breed&&cat.breed!==BREEDS.zh[0]?cat.breed.split(' ')[0]:''}</div>
+      <div class="cat-breed-display">${breedDisplay}</div>
       <span class="cat-card-chevron">▼</span>
     </div>
     <div class="cat-card-body">
@@ -671,7 +673,8 @@ function updateCatField(id,field,value){
   if (card){
     card.querySelector('.cat-name-display').textContent=cat.name||'('+t('catNamePH')+')';
     const bd=card.querySelector('.cat-breed-display');
-    bd.textContent=cat.breed&&cat.breed!==BREEDS.zh[0]?cat.breed.split(' ')[0]:'';
+    const bi=BREEDS.zh.indexOf(cat.breed);
+    bd.textContent=bi>0?BREEDS[lang][bi].split(' ')[0]:'';
   }
 }
 
@@ -703,7 +706,7 @@ function handlePhotoUpload(catId,input){
   const reader=new FileReader();
   reader.onload=e=>{
     const img=new Image();
-    img.onerror=()=>{toast('❌ 相片格式不支援，請轉為 JPG/PNG（HEIF/HEVC 唔得）','error');};
+    img.onerror=()=>{toast(t('photoFmtError'),'error');};
     img.onload=()=>{
       const MAX=512,scale=Math.min(1,MAX/Math.max(img.width,img.height));
       const canvas=document.createElement('canvas');
