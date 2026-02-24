@@ -713,7 +713,7 @@ function handlePhotoUpload(catId,input){
         localStorage.setItem('catmon_photo_'+catId,b64);
         renderCatCards();
         toast(t('photoSaved'),'success');
-      }catch(e){toast(t('photoTooLarge'),'error');}
+      }catch(e){console.error('photo save error',e);toast(t('photoTooLarge')+'('+e.message+')','error');}
     };
     img.src=e.target.result;
   };
