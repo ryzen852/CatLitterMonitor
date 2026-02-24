@@ -620,7 +620,9 @@ function getCatColor(id){ const c=getCatById(id); return c?c.colorDot:'#5a7a96';
 // ═══════════════════════════════════════
 function renderCatCards() {
   const cats = getCats();
+  const openIds = new Set([...document.querySelectorAll('.cat-card.open')].map(el=>el.id.replace('card_','')));
   document.getElementById('catCards').innerHTML = cats.map((cat,i)=>buildCatCard(cat,i)).join('');
+  openIds.forEach(id=>{const el=document.getElementById('card_'+id);if(el)el.classList.add('open');});
 }
 
 function breedOptions(sel) {
