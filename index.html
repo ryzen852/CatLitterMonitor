@@ -1163,8 +1163,8 @@ Respond ONLY with valid JSON, no markdown:
 }
 
 function translateActivity(act){
-  const m={urinating:t('actPee'),defecating:t('actPoop'),investigating:t('actInvestigate'),covering:t('actCover'),exiting:t('actExit'),none:t('actNone')};
-  return m[act]||t('actNone');
+  const m={urinating:t('actPee'),defecating:t('actPoop'),investigating:t('actInvestigate'),covering:t('actCover'),exiting:t('actExit'),none:t('actNone'),unclear:t('actUnknown')};
+  return m[act]||t('actUnknown');
 }
 
 // ═══════════════════════════════════════
