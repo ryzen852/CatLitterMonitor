@@ -439,7 +439,8 @@ const STRINGS = {
     noEliminationHint:'建議 90 秒。貓入砂盆卻冇尿冇便可能係尿道阻塞等緊急情況',
     noEliminationAlert:'⚠️ 入砂盆但冇排泄',
     dailySummaryTitle:'📊 每日如廁摘要',visitCount:'如廁次數',peeCount:'尿',poopCount:'便',
-    evtMonitorStart:'📷 監察已啟動',evtMonitorStop:'⏹ 監察已停止',evtSessionStart:'🔴 Session 開始',evtSessionAborted:'⚠️ Session 中止（手動停止）'
+    evtMonitorStart:'📷 監察已啟動',evtMonitorStop:'⏹ 監察已停止',evtSessionStart:'🔴 Session 開始',evtSessionAborted:'⚠️ Session 中止（手動停止）',
+    videoRecording:'🎥 錄影中',videoSending:'📤 傳送片段中...',videoSent:'✅ 片段已傳送',videoFail:'❌ 片段傳送失敗',videoNotSupported:'⚠️ 此瀏覽器不支援錄影'
   },
   en: {
     appTitle:'Cat Litter Monitor',hdrTitle:'Cat <span>Litter</span> Monitor',
@@ -522,7 +523,8 @@ const STRINGS = {
     noEliminationHint:'Recommended 90s. Cat in box with no output may indicate urinary blockage or obstruction.',
     noEliminationAlert:'⚠️ In box but no elimination',
     dailySummaryTitle:'📊 Daily Litter Summary',visitCount:'Visits',peeCount:'Pee',poopCount:'Poop',
-    evtMonitorStart:'📷 Monitoring started',evtMonitorStop:'⏹ Monitoring stopped',evtSessionStart:'🔴 Session started',evtSessionAborted:'⚠️ Session aborted (manual stop)'
+    evtMonitorStart:'📷 Monitoring started',evtMonitorStop:'⏹ Monitoring stopped',evtSessionStart:'🔴 Session started',evtSessionAborted:'⚠️ Session aborted (manual stop)',
+    videoRecording:'🎥 Recording',videoSending:'📤 Sending clip...',videoSent:'✅ Clip sent',videoFail:'❌ Clip send failed',videoNotSupported:'⚠️ Recording not supported in this browser'
   }
 };
 
@@ -815,6 +817,7 @@ function importData(input){
 // ═══════════════════════════════════════
 let stream=null,motionTimer=null,sessionEndTimer=null,sessionTimerInterval=null;
 let isInSession=false,motionStartTime=null,wakeLock=null;
+let mediaRecorder=null,recordedChunks=[],catConfirmedInSession=false;
 let sessionStartTime=null,sessionApiCalls=[],lastAnalyzeTime=0;
 let prevFrame=null,motionCanvas=null,motionCtx=null;
 let roi=null,isDrawingROI=false,roiStart=null;
@@ -935,6 +938,7 @@ function handleMotionState(smoothedPct,threshold,s){
 function startSession(){
   isInSession=true;sessionStartTime=new Date();sessionApiCalls=[];lastAnalyzeTime=0;
   entryFrameDone=false;dropFrameDone=false;sessionPeakPct=0;recentPcts=[];
+  catConfirmedInSession=false;startRecording();
   document.getElementById('sessionCard').classList.add('visible');
   document.getElementById('sessionStart').textContent=formatTime(sessionStartTime);
   document.getElementById('sessionCatName').textContent='...';
@@ -986,6 +990,7 @@ async function finalizeSession(){
   if(!result.catPresent){
     const noCatEntry={timestamp:sessionStartTime.toISOString(),endTimestamp:new Date().toISOString(),duration,cat:'none',catName:'__noCat__',activity:'none',confidence:0,notes:'',identBasis:'',wasteAnalysis:null,alerts:[]};
     addLog(noCatEntry);
+    stopRecording();
     toast(t('noCatDetected'),'');
     if(s.notifMode==='everything'){
       const time=new Date(sessionStartTime).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
@@ -998,6 +1003,7 @@ async function finalizeSession(){
   const entry={timestamp:sessionStartTime.toISOString(),endTimestamp:new Date().toISOString(),duration,cat:result.cat,catName:getCatName(result.cat),activity:result.activity,confidence:result.confidence,notes:result.notes,identBasis:result.identBasis,wasteAnalysis:result.wasteAnalysis,alerts:[]};
   entry.alerts=checkHealth(entry,s);
   addLog(entry);await sendNotifications(entry,s,entry.alerts);
+  await stopRecordingAndSend(s,entry.catName);
 }
 
 async function endSession(aborted){
@@ -1009,6 +1015,7 @@ async function endSession(aborted){
   document.getElementById('sessionCard').classList.remove('visible');
   setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
   if(sessionApiCalls.length)await finalizeSession();
+  else stopRecording();
 }
 
 function aggregateSession(calls){
@@ -1160,6 +1167,7 @@ Respond ONLY with valid JSON, no markdown:
     try{
       const result=JSON.parse(text.replace(/```json|```/g,'').trim());
       sessionApiCalls.push(result);
+      if(result.cat_present)catConfirmedInSession=true;
       const unk=result.cat_identity==='unknown'||result.cat_identity==='none';
       document.getElementById('sessionCatName').textContent=unk?t('actUnknown'):getCatName(result.cat_identity);
       document.getElementById('sessionActivity').textContent=translateActivity(result.activity);
@@ -1213,6 +1221,67 @@ async function sendNotifications(entry,s,alerts){
   // 'all' and 'everything' both send per-visit notifications
   const msg=buildMsg(entry,alerts);
   await pushMsg(msg,s);
+}
+
+// ═══════════════════════════════════════
+// VIDEO RECORDING
+// ═══════════════════════════════════════
+function startRecording(){
+  recordedChunks=[];
+  if(!stream||!window.MediaRecorder){return;}
+  const mimeType=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(m=>MediaRecorder.isTypeSupported(m));
+  if(!mimeType){toast(t('videoNotSupported'),'');return;}
+  try{
+    mediaRecorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:500000});
+    mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size>0)recordedChunks.push(e.data);};
+    mediaRecorder.start(1000);
+    setCamStatus(t('inSession')+' '+t('videoRecording'),'in-session');
+  }catch(e){console.error('MediaRecorder error',e);}
+}
+
+function stopRecording(){
+  if(mediaRecorder&&mediaRecorder.state!=='inactive'){
+    mediaRecorder.stop();mediaRecorder=null;
+  }
+  recordedChunks=[];
+}
+
+async function stopRecordingAndSend(s,catName){
+  if(!mediaRecorder&&!recordedChunks.length){return;}
+  if(mediaRecorder&&mediaRecorder.state!=='inactive'){
+    await new Promise(res=>{mediaRecorder.onstop=res;mediaRecorder.stop();});
+    mediaRecorder=null;
+  }
+  if(!recordedChunks.length)return;
+  const blob=new Blob(recordedChunks,{type:recordedChunks[0].type||'video/webm'});
+  recordedChunks=[];
+  toast(t('videoSending'),'');
+  const time=new Date(sessionStartTime).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
+  const caption=`🎥 ${catName} — ${time}`;
+  let sent=false;
+  // Send to Telegram
+  if(s.tgToken&&s.tgChatId){
+    try{
+      const fd=new FormData();
+      fd.append('chat_id',s.tgChatId);
+      fd.append('caption',caption);
+      fd.append('video',blob,'session.webm');
+      const r=await fetch(`https://api.telegram.org/bot${s.tgToken}/sendVideo`,{method:'POST',body:fd});
+      const d=await r.json();
+      if(d.ok)sent=true;
+    }catch(e){console.error('TG video error',e);}
+  }
+  // Send to Discord
+  if(s.discordWebhook){
+    try{
+      const fd=new FormData();
+      fd.append('content',caption);
+      fd.append('file',blob,'session.webm');
+      const r=await fetch(s.discordWebhook,{method:'POST',body:fd});
+      if(r.ok)sent=true;
+    }catch(e){console.error('Discord video error',e);}
+  }
+  toast(sent?t('videoSent'):t('videoFail'),sent?'success':'error');
 }
 
 async function pushMsg(msg,s){
