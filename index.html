@@ -1229,7 +1229,7 @@ async function sendNotifications(entry,s,alerts){
 function startRecording(){
   recordedChunks=[];
   if(!stream||!window.MediaRecorder){return;}
-  const mimeType=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm','video/mp4'].find(m=>MediaRecorder.isTypeSupported(m));
+  const mimeType=['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
   if(!mimeType){toast(t('videoNotSupported'),'');return;}
   try{
     mediaRecorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:500000});
@@ -1253,6 +1253,7 @@ async function stopRecordingAndSend(s,catName){
     mediaRecorder=null;
   }
   if(!recordedChunks.length)return;
+  const ext=recordedChunks[0]?.type?.includes('mp4')?'mp4':'webm';
   const blob=new Blob(recordedChunks,{type:recordedChunks[0].type||'video/webm'});
   recordedChunks=[];
   toast(t('videoSending'),'');
@@ -1265,7 +1266,7 @@ async function stopRecordingAndSend(s,catName){
       const fd=new FormData();
       fd.append('chat_id',s.tgChatId);
       fd.append('caption',caption);
-      fd.append('video',blob,'session.webm');
+      fd.append('video',blob,`session.${ext}`);
       const r=await fetch(`https://api.telegram.org/bot${s.tgToken}/sendVideo`,{method:'POST',body:fd});
       const d=await r.json();
       if(d.ok)sent=true;
@@ -1276,7 +1277,7 @@ async function stopRecordingAndSend(s,catName){
     try{
       const fd=new FormData();
       fd.append('content',caption);
-      fd.append('file',blob,'session.webm');
+      fd.append('file',blob,`session.${ext}`);
       const r=await fetch(s.discordWebhook,{method:'POST',body:fd});
       if(r.ok)sent=true;
     }catch(e){console.error('Discord video error',e);}
