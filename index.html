@@ -1016,7 +1016,6 @@ async function finalizeSession(){
   if(!result.catPresent){
     const noCatEntry={timestamp:sessionStartTime.toISOString(),endTimestamp:new Date().toISOString(),duration,cat:'none',catName:'__noCat__',activity:'none',confidence:0,notes:'',identBasis:'',wasteAnalysis:null,alerts:[]};
     addLog(noCatEntry);
-    stopRecording();
     toast(t('noCatDetected'),'');
     if(s.notifMode==='everything'){
       const time=new Date(sessionStartTime).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
@@ -1024,6 +1023,7 @@ async function finalizeSession(){
       await pushMsg(`👻 ${t('noCatDetected')}
 🕐 ${time} ｜ ⏱ ${dur}`,s);
     }
+    await stopRecordingAndSend(s,t('noCatDetected'));
     return;
   }
   const entry={timestamp:sessionStartTime.toISOString(),endTimestamp:new Date().toISOString(),duration,cat:result.cat,catName:getCatName(result.cat),activity:result.activity,confidence:result.confidence,notes:result.notes,identBasis:result.identBasis,wasteAnalysis:result.wasteAnalysis,alerts:[]};
@@ -1045,7 +1045,7 @@ async function endSession(aborted){
   document.getElementById('sessionCard').classList.remove('visible');
   setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
   if(sessionApiCalls.length)await finalizeSession();
-  else stopRecording();
+  else await stopRecordingAndSend(loadSettings(),'');
 }
 
 function aggregateSession(calls){
