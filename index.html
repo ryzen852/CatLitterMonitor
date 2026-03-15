@@ -1459,8 +1459,8 @@ function startTgPolling(s,logId){
     const cfg=loadSettings();
     if(!cfg.tgToken){tgPollingActive=false;return;}
     try{
-      const url=`https://api.telegram.org/bot${cfg.tgToken}/getUpdates?offset=${tgLastUpdateId+1}&timeout=5&allowed_updates=["callback_query"]`;
-      const r=await fetch(url);const d=await r.json();
+      const url=`https://api.telegram.org/bot${cfg.tgToken}/getUpdates?offset=${tgLastUpdateId+1}&allowed_updates=%5B%22callback_query%22%5D`;
+      const r=await fetch(url,{signal:AbortSignal.timeout(4000)});const d=await r.json();
       if(d.ok&&d.result.length){
         for(const upd of d.result){
           tgLastUpdateId=upd.update_id;
@@ -1488,12 +1488,12 @@ function startTgPolling(s,logId){
     }catch(e){}
     // Keep polling as long as there are pending confirmations
     if(getPendingLogIds().length>0){
-      setTimeout(poll,10000);
+      setTimeout(poll,2000);
     }else{
       tgPollingActive=false;
     }
   };
-  setTimeout(poll,3000);
+  setTimeout(poll,1000);
 }
 
 // Resume polling for any unanswered confirmations when app loads
