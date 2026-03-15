@@ -442,7 +442,7 @@ const STRINGS = {
     evtMonitorStart:'📷 監察已啟動',evtMonitorStop:'⏹ 監察已停止',evtSessionStart:'🔴 Session 開始',evtSessionAborted:'⚠️ Session 中止（手動停止）',
     videoRecording:'🎥 錄影中',videoSending:'📤 傳送片段中...',videoSent:'✅ 片段已傳送',videoFail:'❌ 片段傳送失敗',videoNotSupported:'⚠️ 此瀏覽器不支援錄影',
     confirmCatMsg:'❓ 唔確定係邊隻貓，請確認',confirmCatBtn:'確認貓貓身份',confirmCatDiscord:'❓ 唔確定係邊隻貓 — 請回覆貓貓名字確認',
-    clothesColorLabel:'衫嘅顏色（如有）',clothesColorPH:'例如：紅色、藍色',
+    clothesColorLabel:'衫嘅顏色（如有）',clothesColorPH:'可填多款，例如：紅色、藍色、黃色',
     videoPolling:'🔍 監察貓貓中...',videoMaxReached:'⏹ 達到最長錄影時間',
     fallbackSending:'📤 傳送截圖中...',fallbackSent:'✅ 截圖已傳送（片太大）'
   },
@@ -530,7 +530,7 @@ const STRINGS = {
     evtMonitorStart:'📷 Monitoring started',evtMonitorStop:'⏹ Monitoring stopped',evtSessionStart:'🔴 Session started',evtSessionAborted:'⚠️ Session aborted (manual stop)',
     videoRecording:'🎥 Recording',videoSending:'📤 Sending clip...',videoSent:'✅ Clip sent',videoFail:'❌ Clip send failed',videoNotSupported:'⚠️ Recording not supported in this browser',
     confirmCatMsg:'❓ Cat identity unclear — please confirm',confirmCatBtn:'Confirm Cat',confirmCatDiscord:'❓ Cat identity unclear — please reply with cat name to confirm',
-    clothesColorLabel:'Clothing colour (if any)',clothesColorPH:'e.g. red, blue',
+    clothesColorLabel:'Clothing colour (if any)',clothesColorPH:'Multiple OK, e.g. red, blue, yellow',
     videoPolling:'🔍 Monitoring cat...',videoMaxReached:'⏹ Max recording duration reached',
     fallbackSending:'📤 Sending screenshot...',fallbackSent:'✅ Screenshot sent (video too large)'
   }
@@ -1114,7 +1114,7 @@ async function analyzeFrame(shotType='manual'){
   const catDesc=cats.map((c,i)=>{
     let d=`Cat ${i+1} — ID: ${c.id}, Name: ${c.name||'(unnamed)'}`;
     if(c.breed&&c.breed!==BREEDS.zh[0])d+=`, Breed: ${c.breed}`;
-    if(c.clothesColor)d+=`\nClothing: may be wearing ${c.clothesColor} clothing — treat this colour as fabric, NOT fur`;
+    if(c.clothesColor)d+=`\nClothing: may be wearing ${c.clothesColor.replace(/，/g,',').replace(/、/g,',')} clothing — treat this colour as fabric, NOT fur`;
     if(c.desc)d+=`\nUnique features: ${c.desc}`;
     return d;
   }).join('\n\n');
