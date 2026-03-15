@@ -440,7 +440,11 @@ const STRINGS = {
     noEliminationAlert:'⚠️ 入砂盆但冇排泄',
     dailySummaryTitle:'📊 每日如廁摘要',visitCount:'如廁次數',peeCount:'尿',poopCount:'便',
     evtMonitorStart:'📷 監察已啟動',evtMonitorStop:'⏹ 監察已停止',evtSessionStart:'🔴 Session 開始',evtSessionAborted:'⚠️ Session 中止（手動停止）',
-    videoRecording:'🎥 錄影中',videoSending:'📤 傳送片段中...',videoSent:'✅ 片段已傳送',videoFail:'❌ 片段傳送失敗',videoNotSupported:'⚠️ 此瀏覽器不支援錄影'
+    videoRecording:'🎥 錄影中',videoSending:'📤 傳送片段中...',videoSent:'✅ 片段已傳送',videoFail:'❌ 片段傳送失敗',videoNotSupported:'⚠️ 此瀏覽器不支援錄影',
+    confirmCatMsg:'❓ 唔確定係邊隻貓，請確認',confirmCatBtn:'確認貓貓身份',confirmCatDiscord:'❓ 唔確定係邊隻貓 — 請回覆貓貓名字確認',
+    clothesColorLabel:'衫嘅顏色（如有）',clothesColorPH:'例如：紅色、藍色',
+    videoPolling:'🔍 監察貓貓中...',videoMaxReached:'⏹ 達到最長錄影時間',
+    fallbackSending:'📤 傳送截圖中...',fallbackSent:'✅ 截圖已傳送（片太大）'
   },
   en: {
     appTitle:'Cat Litter Monitor',hdrTitle:'Cat <span>Litter</span> Monitor',
@@ -524,7 +528,11 @@ const STRINGS = {
     noEliminationAlert:'⚠️ In box but no elimination',
     dailySummaryTitle:'📊 Daily Litter Summary',visitCount:'Visits',peeCount:'Pee',poopCount:'Poop',
     evtMonitorStart:'📷 Monitoring started',evtMonitorStop:'⏹ Monitoring stopped',evtSessionStart:'🔴 Session started',evtSessionAborted:'⚠️ Session aborted (manual stop)',
-    videoRecording:'🎥 Recording',videoSending:'📤 Sending clip...',videoSent:'✅ Clip sent',videoFail:'❌ Clip send failed',videoNotSupported:'⚠️ Recording not supported in this browser'
+    videoRecording:'🎥 Recording',videoSending:'📤 Sending clip...',videoSent:'✅ Clip sent',videoFail:'❌ Clip send failed',videoNotSupported:'⚠️ Recording not supported in this browser',
+    confirmCatMsg:'❓ Cat identity unclear — please confirm',confirmCatBtn:'Confirm Cat',confirmCatDiscord:'❓ Cat identity unclear — please reply with cat name to confirm',
+    clothesColorLabel:'Clothing colour (if any)',clothesColorPH:'e.g. red, blue',
+    videoPolling:'🔍 Monitoring cat...',videoMaxReached:'⏹ Max recording duration reached',
+    fallbackSending:'📤 Sending screenshot...',fallbackSent:'✅ Screenshot sent (video too large)'
   }
 };
 
@@ -672,6 +680,12 @@ function buildCatCard(cat, idx) {
           oninput="updateCatField('${cat.id}','colorDot',this.value);document.querySelector('#card_${cat.id} .cat-card-header .cat-dot').style.background=this.value">
         <button class="cat-delete-btn" onclick="deleteCat('${cat.id}')">${t('deleteCat')}</button>
       </div>
+      <div style="margin-top:6px;display:flex;flex-direction:column;gap:3px">
+        <label style="font-size:10px;color:var(--text-dim)">${t('clothesColorLabel')}</label>
+        <input type="text" placeholder="${t('clothesColorPH')}" value="${cat.clothesColor||''}"
+          oninput="updateCatField('${cat.id}','clothesColor',this.value)"
+          style="font-size:12px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text)">
+      </div>
     </div>
   </div>`;
 }
@@ -818,6 +832,9 @@ function importData(input){
 let stream=null,motionTimer=null,sessionEndTimer=null,sessionTimerInterval=null;
 let isInSession=false,motionStartTime=null,wakeLock=null;
 let mediaRecorder=null,recordedChunks=[],catConfirmedInSession=false;
+let presenceNoCatCount=0; // consecutive no-cat presence checks needed before finalize
+let videoPollingTimer=null,videoStartTime=null,pendingConfirmEntry=null;
+let tgPollingActive=false,tgLastUpdateId=0;
 let sessionStartTime=null,sessionApiCalls=[],lastAnalyzeTime=0;
 let prevFrame=null,motionCanvas=null,motionCtx=null;
 let roi=null,isDrawingROI=false,roiStart=null;
@@ -938,7 +955,7 @@ function handleMotionState(smoothedPct,threshold,s){
 function startSession(){
   isInSession=true;sessionStartTime=new Date();sessionApiCalls=[];lastAnalyzeTime=0;
   entryFrameDone=false;dropFrameDone=false;sessionPeakPct=0;recentPcts=[];
-  catConfirmedInSession=false;startRecording();
+  catConfirmedInSession=false;presenceNoCatCount=0;startRecording();
   document.getElementById('sessionCard').classList.add('visible');
   document.getElementById('sessionStart').textContent=formatTime(sessionStartTime);
   document.getElementById('sessionCatName').textContent='...';
@@ -964,16 +981,24 @@ async function schedulePresenceCheck(s){
   sessionEndTimer=null;
   setCamStatus(t('checkingPresence'),'analyzing');
   await analyzeFrame('presence_check');
-  // Check the latest result
   const latest=sessionApiCalls[sessionApiCalls.length-1];
   if(latest&&latest.cat_present){
-    // Cat still there — reset end timer
+    // Cat still there — reset counter and end timer
+    presenceNoCatCount=0;
     setCamStatus(t('catStillPresent'),'in-session');
     setTimeout(()=>setCamStatus(t('inSession'),'in-session'),2000);
     sessionEndTimer=setTimeout(()=>schedulePresenceCheck(s),s.sessionEndDelay*1000);
   }else{
-    // Cat gone — finalize
-    finalizeSession();
+    presenceNoCatCount++;
+    if(presenceNoCatCount>=2){
+      // 2 consecutive no-cat confirms — cat is gone
+      presenceNoCatCount=0;
+      finalizeSession();
+    }else{
+      // 1st no-cat — check again after 10s to be sure
+      setCamStatus(t('checkingPresence'),'analyzing');
+      sessionEndTimer=setTimeout(()=>schedulePresenceCheck(s),10000);
+    }
   }
 }
 
@@ -981,6 +1006,7 @@ async function finalizeSession(){
   isInSession=false;
   if(sessionTimerInterval){clearInterval(sessionTimerInterval);sessionTimerInterval=null;}
   if(sessionEndTimer){clearTimeout(sessionEndTimer);sessionEndTimer=null;}
+  if(videoPollingTimer){clearInterval(videoPollingTimer);videoPollingTimer=null;}
   motionStartTime=null;
   document.getElementById('sessionCard').classList.remove('visible');
   setCamStatus(t('monitoring'),'');setOverlay(t('monitoring'));
@@ -1004,6 +1030,10 @@ async function finalizeSession(){
   entry.alerts=checkHealth(entry,s);
   addLog(entry);await sendNotifications(entry,s,entry.alerts);
   await stopRecordingAndSend(s,entry.catName);
+  // Low confidence or unknown — ask user to confirm cat identity
+  if((entry.confidence<70||entry.cat==='unknown')&&(s.tgToken||s.discordWebhook)){
+    await askCatConfirmation(entry,s);
+  }
 }
 
 async function endSession(aborted){
@@ -1084,6 +1114,7 @@ async function analyzeFrame(shotType='manual'){
   const catDesc=cats.map((c,i)=>{
     let d=`Cat ${i+1} — ID: ${c.id}, Name: ${c.name||'(unnamed)'}`;
     if(c.breed&&c.breed!==BREEDS.zh[0])d+=`, Breed: ${c.breed}`;
+    if(c.clothesColor)d+=`\nClothing: may be wearing ${c.clothesColor} clothing — treat this colour as fabric, NOT fur`;
     if(c.desc)d+=`\nUnique features: ${c.desc}`;
     return d;
   }).join('\n\n');
@@ -1125,8 +1156,9 @@ ${hasRefs?'Reference photos provided above. Use for direct visual comparison.':'
 IDENTIFICATION:
 1. Is litter box visible in the LIVE IMAGE?
 2. Is any cat present?
-3. If yes: compare against references + descriptions (size, coat, markings, face, ears, unique features)
-4. If confidence < 0.5, set cat_identity to "unknown". DO NOT GUESS.
+3. If yes: identify by body shape, face shape, ear shape, tail length/shape, limb proportions, coat pattern/texture. DO NOT rely on colour alone if a cat may be wearing clothing.
+4. If a cat appears to be wearing a solid-colour garment (e.g. red, blue, pink vest/shirt), identify by body/face features, NOT by garment colour.
+5. If confidence < 0.5, set cat_identity to "unknown". DO NOT GUESS.
 Confidence guide: 0.9+ clearly identified | 0.7–0.89 likely | 0.5–0.69 possible | <0.5 → unknown
 
 ${doWaste?`WASTE ANALYSIS GUIDELINES (only if waste_analysis requested):
@@ -1167,7 +1199,10 @@ Respond ONLY with valid JSON, no markdown:
     try{
       const result=JSON.parse(text.replace(/```json|```/g,'').trim());
       sessionApiCalls.push(result);
-      if(result.cat_present)catConfirmedInSession=true;
+      if(result.cat_present&&!catConfirmedInSession){
+        catConfirmedInSession=true;
+        startVideoPolling();
+      }
       const unk=result.cat_identity==='unknown'||result.cat_identity==='none';
       document.getElementById('sessionCatName').textContent=unk?t('actUnknown'):getCatName(result.cat_identity);
       document.getElementById('sessionActivity').textContent=translateActivity(result.activity);
@@ -1228,6 +1263,8 @@ async function sendNotifications(entry,s,alerts){
 // ═══════════════════════════════════════
 function startRecording(){
   recordedChunks=[];
+  videoStartTime=Date.now();
+  if(videoPollingTimer){clearInterval(videoPollingTimer);videoPollingTimer=null;}
   if(!stream||!window.MediaRecorder){return;}
   const mimeType=['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(m=>MediaRecorder.isTypeSupported(m));
   if(!mimeType){toast(t('videoNotSupported'),'');return;}
@@ -1235,11 +1272,53 @@ function startRecording(){
     mediaRecorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:500000});
     mediaRecorder.ondataavailable=e=>{if(e.data&&e.data.size>0)recordedChunks.push(e.data);};
     mediaRecorder.start(1000);
-    setCamStatus(t('inSession')+' '+t('videoRecording'),'in-session');
   }catch(e){console.error('MediaRecorder error',e);}
 }
 
+// Start 10s polling after cat is confirmed present
+function startVideoPolling(){
+  if(videoPollingTimer)return; // already polling
+  let noCatPollCount=0;
+  const MAX_MS=4*60*1000; // 4 minutes
+  const s=loadSettings();
+  videoPollingTimer=setInterval(async()=>{
+    if(!isInSession){clearInterval(videoPollingTimer);videoPollingTimer=null;return;}
+    // Check 4-min limit
+    if(Date.now()-videoStartTime>=MAX_MS){
+      clearInterval(videoPollingTimer);videoPollingTimer=null;
+      toast(t('videoMaxReached'),'');
+      finalizeSession();
+      return;
+    }
+    // Capture frame and ask Claude
+    const video=document.getElementById('videoEl');
+    if(!video.videoWidth)return;
+    const cap=document.createElement('canvas');cap.width=640;cap.height=Math.round(640*video.videoHeight/video.videoWidth);
+    cap.getContext('2d').drawImage(video,0,0,cap.width,cap.height);
+    const liveB64=cap.toDataURL('image/jpeg',.6).split(',')[1];
+    const apiS=loadSettings();
+    if(!apiS.apiKey)return;
+    try{
+      const resp=await fetch('https://catmon-proxy.ryzen852.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({__apiKey:apiS.apiKey,model:apiS.apiModel,max_tokens:100,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:liveB64}},{type:'text',text:'Is a cat visible in this image? Reply ONLY with valid JSON: {"cat_present":true} or {"cat_present":false}'}]}]})});
+      if(!resp.ok)return;
+      const data=await resp.json();
+      const txt=data.content?.[0]?.text||'';
+      const result=JSON.parse(txt.replace(/```json|```/g,'').trim());
+      if(!result.cat_present){
+        noCatPollCount++;
+        if(noCatPollCount>=2){
+          clearInterval(videoPollingTimer);videoPollingTimer=null;
+          finalizeSession();
+        }
+      }else{
+        noCatPollCount=0;
+      }
+    }catch(e){/* ignore polling errors */}
+  },10000);
+}
+
 function stopRecording(){
+  if(videoPollingTimer){clearInterval(videoPollingTimer);videoPollingTimer=null;}
   if(mediaRecorder&&mediaRecorder.state!=='inactive'){
     mediaRecorder.stop();mediaRecorder=null;
   }
@@ -1282,7 +1361,116 @@ async function stopRecordingAndSend(s,catName){
       if(r.ok)sent=true;
     }catch(e){console.error('Discord video error',e);}
   }
+  if(!sent&&recordedChunks.length===0){
+    // Fallback: send a screenshot
+    const video=document.getElementById('videoEl');
+    if(video&&video.videoWidth&&(s.tgToken||s.discordWebhook)){
+      toast(t('fallbackSending'),'');
+      const cap=document.createElement('canvas');cap.width=640;cap.height=Math.round(640*video.videoHeight/video.videoWidth);
+      cap.getContext('2d').drawImage(video,0,0,cap.width,cap.height);
+      let fbBlob=null;
+      await new Promise(res=>{cap.toBlob(b=>{fbBlob=b;res();},'image/jpeg',0.7);});
+      const time=new Date(sessionStartTime).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
+      if(s.tgToken&&s.tgChatId&&fbBlob){
+        const fd=new FormData();fd.append('chat_id',s.tgChatId);fd.append('caption',`📸 ${catName} — ${time}`);fd.append('photo',fbBlob,'fallback.jpg');
+        try{const r=await fetch(`https://api.telegram.org/bot${s.tgToken}/sendPhoto`,{method:'POST',body:fd});if((await r.json()).ok)sent=true;}catch(e){}
+      }
+      if(s.discordWebhook&&fbBlob){
+        const fd=new FormData();fd.append('content',`📸 ${catName} — ${time}`);fd.append('file',fbBlob,'fallback.jpg');
+        try{const r=await fetch(s.discordWebhook,{method:'POST',body:fd});if(r.ok)sent=true;}catch(e){}
+      }
+      toast(sent?t('fallbackSent'):t('videoFail'),sent?'success':'error');
+      return;
+    }
+  }
   toast(sent?t('videoSent'):t('videoFail'),sent?'success':'error');
+}
+
+// ═══════════════════════════════════════
+// IDENTITY CONFIRMATION (TG inline buttons / Discord text)
+// ═══════════════════════════════════════
+async function askCatConfirmation(entry,s){
+  const cats=getCats().filter(c=>c.id!=='none');
+  if(cats.length===0)return;
+  const time=new Date(entry.timestamp).toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
+  const logId=entry.id; // used to update log after confirmation
+
+  // Capture latest frame as screenshot
+  const video=document.getElementById('videoEl');
+  let photoBlob=null;
+  if(video&&video.videoWidth){
+    const cap=document.createElement('canvas');cap.width=640;cap.height=Math.round(640*video.videoHeight/video.videoWidth);
+    cap.getContext('2d').drawImage(video,0,0,cap.width,cap.height);
+    await new Promise(res=>{cap.toBlob(b=>{photoBlob=b;res();},  'image/jpeg',0.7);});
+  }
+
+  // Telegram — inline keyboard with cat name buttons
+  if(s.tgToken&&s.tgChatId){
+    const keyboard={inline_keyboard:[cats.map(c=>({text:c.name||'?',callback_data:`catconfirm:${logId}:${c.id}:${c.name||'?'}`}))]};
+    const caption=`${t('confirmCatMsg')}
+🕐 ${time}`;
+    if(photoBlob){
+      const fd=new FormData();
+      fd.append('chat_id',s.tgChatId);
+      fd.append('caption',caption);
+      fd.append('reply_markup',JSON.stringify(keyboard));
+      fd.append('photo',photoBlob,'confirm.jpg');
+      try{await fetch(\`https://api.telegram.org/bot\${s.tgToken}/sendPhoto\`,{method:'POST',body:fd});}catch(e){}
+    }else{
+      try{await fetch(\`https://api.telegram.org/bot\${s.tgToken}/sendMessage\`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:s.tgChatId,text:caption,reply_markup:keyboard})});}catch(e){}
+    }
+    // Start polling for callback
+    startTgPolling(s,logId);
+  }
+
+  // Discord — send screenshot + text prompt with cat names
+  if(s.discordWebhook){
+    const catList=cats.map(c=>c.name||'?').join(' / ');
+    const msg=`${t('confirmCatDiscord')} (${catList})
+🕐 ${time}`;
+    if(photoBlob){
+      const fd=new FormData();fd.append('content',msg);fd.append('file',photoBlob,'confirm.jpg');
+      try{await fetch(s.discordWebhook,{method:'POST',body:fd});}catch(e){}
+    }else{
+      try{await fetch(s.discordWebhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:msg,username:'🐱 Cat Monitor'})});}catch(e){}
+    }
+  }
+}
+
+function startTgPolling(s,logId){
+  if(tgPollingActive)return;
+  tgPollingActive=true;
+  let attempts=0;
+  const MAX=30; // poll up to 5 min (30 x 10s)
+  const poll=async()=>{
+    if(attempts>=MAX){tgPollingActive=false;return;}
+    attempts++;
+    try{
+      const url=\`https://api.telegram.org/bot\${s.tgToken}/getUpdates?offset=\${tgLastUpdateId+1}&timeout=5&allowed_updates=["callback_query"]\`;
+      const r=await fetch(url);const d=await r.json();
+      if(d.ok&&d.result.length){
+        for(const upd of d.result){
+          tgLastUpdateId=upd.update_id;
+          const cb=upd.callback_query;
+          if(cb&&cb.data&&cb.data.startsWith('catconfirm:')){
+            const [,lid,catId,catName]=cb.data.split(':');
+            if(lid==logId){
+              // Update the log entry
+              const logs=getLogs();
+              const idx=logs.findIndex(l=>l.id==lid);
+              if(idx>=0){logs[idx].cat=catId;logs[idx].catName=catName;saveLogs(logs);renderRecentEvents();renderLog();}
+              // Answer callback to remove loading indicator on TG button
+              try{await fetch(\`https://api.telegram.org/bot\${s.tgToken}/answerCallbackQuery\`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callback_query_id:cb.id,text:\`✅ \${catName}\`})});}catch(e){}
+              tgPollingActive=false;
+              return;
+            }
+          }
+        }
+      }
+    }catch(e){}
+    setTimeout(poll,10000);
+  };
+  setTimeout(poll,3000);
 }
 
 async function pushMsg(msg,s){
