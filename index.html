@@ -1415,9 +1415,9 @@ async function askCatConfirmation(entry,s){
       fd.append('caption',caption);
       fd.append('reply_markup',JSON.stringify(keyboard));
       fd.append('photo',photoBlob,'confirm.jpg');
-      try{await fetch(\`https://api.telegram.org/bot\${s.tgToken}/sendPhoto\`,{method:'POST',body:fd});}catch(e){}
+      try{await fetch(`https://api.telegram.org/bot${s.tgToken}/sendPhoto`,{method:'POST',body:fd});}catch(e){}
     }else{
-      try{await fetch(\`https://api.telegram.org/bot\${s.tgToken}/sendMessage\`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:s.tgChatId,text:caption,reply_markup:keyboard})});}catch(e){}
+      try{await fetch(`https://api.telegram.org/bot${s.tgToken}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:s.tgChatId,text:caption,reply_markup:keyboard})});}catch(e){}
     }
     // Start polling for callback
     startTgPolling(s,logId);
@@ -1446,7 +1446,7 @@ function startTgPolling(s,logId){
     if(attempts>=MAX){tgPollingActive=false;return;}
     attempts++;
     try{
-      const url=\`https://api.telegram.org/bot\${s.tgToken}/getUpdates?offset=\${tgLastUpdateId+1}&timeout=5&allowed_updates=["callback_query"]\`;
+      const url=`https://api.telegram.org/bot${s.tgToken}/getUpdates?offset=${tgLastUpdateId+1}&timeout=5&allowed_updates=["callback_query"]`;
       const r=await fetch(url);const d=await r.json();
       if(d.ok&&d.result.length){
         for(const upd of d.result){
@@ -1460,7 +1460,7 @@ function startTgPolling(s,logId){
               const idx=logs.findIndex(l=>l.id==lid);
               if(idx>=0){logs[idx].cat=catId;logs[idx].catName=catName;saveLogs(logs);renderRecentEvents();renderLog();}
               // Answer callback to remove loading indicator on TG button
-              try{await fetch(\`https://api.telegram.org/bot\${s.tgToken}/answerCallbackQuery\`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callback_query_id:cb.id,text:\`✅ \${catName}\`})});}catch(e){}
+              try{await fetch(`https://api.telegram.org/bot${s.tgToken}/answerCallbackQuery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callback_query_id:cb.id,text:`✅ ${catName}`})});}catch(e){}
               tgPollingActive=false;
               return;
             }
