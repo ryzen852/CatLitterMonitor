@@ -782,7 +782,7 @@ function v(id){return document.getElementById(id)?.value||'';}
 // ═══════════════════════════════════════
 function getLogs(){return JSON.parse(localStorage.getItem('catmon_logs')||'[]');}
 function saveLogs(logs){localStorage.setItem('catmon_logs',JSON.stringify(logs.slice(0,500)));}
-function addLog(entry){const logs=getLogs();logs.unshift({...entry,id:Date.now()});saveLogs(logs);renderRecentEvents();renderLog();renderStats();}
+function addLog(entry){const logs=getLogs();entry.id=entry.id||Date.now();logs.unshift({...entry});saveLogs(logs);renderRecentEvents();renderLog();renderStats();}
 function clearAllLogs(){if(!confirm(t('logsClearConfirm')))return;localStorage.removeItem('catmon_logs');renderRecentEvents();renderLog();renderStats();toast(t('logsCleared'));}
 function exportData(){
   const cats=getCats();
