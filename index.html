@@ -1437,40 +1437,87 @@ async function askCatConfirmation(entry,s){
   }
 }
 
+// ── TG polling helpers ──────────────────────────────
+function saveTgState(){localStorage.setItem('catmon_tg_state',JSON.stringify({lastUpdateId:tgLastUpdateId,pendingLogIds:getPendingLogIds()}));}
+function loadTgState(){try{return JSON.parse(localStorage.getItem('catmon_tg_state')||'{}');}catch(e){return {};}}
+function getPendingLogIds(){return JSON.parse(localStorage.getItem('catmon_tg_pending')||'[]');}
+function addPendingLogId(id){const p=getPendingLogIds();if(!p.includes(id)){p.push(id);localStorage.setItem('catmon_tg_pending',JSON.stringify(p));}}
+function removePendingLogId(id){const p=getPendingLogIds().filter(x=>x!=id);localStorage.setItem('catmon_tg_pending',JSON.stringify(p));}
+
 function startTgPolling(s,logId){
-  if(tgPollingActive)return;
+  // Persist this logId so we can resume after page reload
+  addPendingLogId(logId);
+  // Restore lastUpdateId from storage
+  const saved=loadTgState();
+  if(saved.lastUpdateId>tgLastUpdateId)tgLastUpdateId=saved.lastUpdateId;
+  if(tgPollingActive)return; // already running, new logId is in pending list
   tgPollingActive=true;
-  let attempts=0;
-  const MAX=30; // poll up to 5 min (30 x 10s)
   const poll=async()=>{
-    if(attempts>=MAX){tgPollingActive=false;return;}
-    attempts++;
+    if(!tgPollingActive)return;
+    const pending=getPendingLogIds();
+    if(!pending.length){tgPollingActive=false;return;}
+    const cfg=loadSettings();
+    if(!cfg.tgToken){tgPollingActive=false;return;}
     try{
-      const url=`https://api.telegram.org/bot${s.tgToken}/getUpdates?offset=${tgLastUpdateId+1}&timeout=5&allowed_updates=["callback_query"]`;
+      const url=`https://api.telegram.org/bot${cfg.tgToken}/getUpdates?offset=${tgLastUpdateId+1}&timeout=5&allowed_updates=["callback_query"]`;
       const r=await fetch(url);const d=await r.json();
       if(d.ok&&d.result.length){
         for(const upd of d.result){
           tgLastUpdateId=upd.update_id;
+          saveTgState();
           const cb=upd.callback_query;
           if(cb&&cb.data&&cb.data.startsWith('catconfirm:')){
-            const [,lid,catId,catName]=cb.data.split(':');
-            if(lid==logId){
-              // Update the log entry
+            const parts=cb.data.split(':');
+            const lid=parts[1],catId=parts[2],catName=parts.slice(3).join(':');
+            if(pending.includes(lid)||pending.map(String).includes(String(lid))){
+              // Update log entry
               const logs=getLogs();
-              const idx=logs.findIndex(l=>l.id==lid);
+              const idx=logs.findIndex(l=>String(l.id)===String(lid));
               if(idx>=0){logs[idx].cat=catId;logs[idx].catName=catName;saveLogs(logs);renderRecentEvents();renderLog();}
-              // Answer callback to remove loading indicator on TG button
-              try{await fetch(`https://api.telegram.org/bot${s.tgToken}/answerCallbackQuery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callback_query_id:cb.id,text:`✅ ${catName}`})});}catch(e){}
-              tgPollingActive=false;
-              return;
+              removePendingLogId(lid);
+              // Ack button tap
+              try{await fetch(`https://api.telegram.org/bot${cfg.tgToken}/answerCallbackQuery`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callback_query_id:cb.id,text:`✅ ${catName}`})});}catch(e){}
+              // Send confirmation message in TG chat
+              const time=new Date().toLocaleTimeString(lang==='zh'?'zh-HK':'en-GB',{hour:'2-digit',minute:'2-digit'});
+              const confirmMsg=lang==='zh'?`✅ 已更新為 *${catName}* 🐱 (${time})`:`✅ Updated to *${catName}* 🐱 (${time})`;
+              try{await fetch(`https://api.telegram.org/bot${cfg.tgToken}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:cfg.tgChatId,text:confirmMsg,parse_mode:'Markdown'})});}catch(e){}
             }
           }
         }
       }
     }catch(e){}
-    setTimeout(poll,10000);
+    // Keep polling as long as there are pending confirmations
+    if(getPendingLogIds().length>0){
+      setTimeout(poll,10000);
+    }else{
+      tgPollingActive=false;
+    }
   };
   setTimeout(poll,3000);
+}
+
+// Resume polling for any unanswered confirmations when app loads
+function resumeTgPollingIfNeeded(){
+  const pending=getPendingLogIds();
+  if(!pending.length)return;
+  const saved=loadTgState();
+  if(saved.lastUpdateId>tgLastUpdateId)tgLastUpdateId=saved.lastUpdateId;
+  const s=loadSettings();
+  if(!s.tgToken)return;
+  // Check if expired (> 24h) — clean up stale entries
+  const logs=getLogs();
+  const fresh=pending.filter(lid=>{
+    const entry=logs.find(l=>String(l.id)===String(lid));
+    if(!entry)return false;
+    return(Date.now()-new Date(entry.timestamp).getTime())<86400000;
+  });
+  if(fresh.length!==pending.length){
+    localStorage.setItem('catmon_tg_pending',JSON.stringify(fresh));
+  }
+  if(fresh.length>0){
+    toast(lang==='zh'?`📬 繼續等待 ${fresh.length} 個貓貓身份確認...`:`📬 Resuming ${fresh.length} pending cat confirmation(s)...`,'');
+    startTgPolling(s, fresh[0]);
+  }
 }
 
 async function pushMsg(msg,s){
@@ -1746,6 +1793,7 @@ function init(){
   loadSettingsToForm();renderCatCards();renderLogFilter();renderRecentEvents();applyLang();
   if(loadSettings().apiKey)document.getElementById('setupOverlay').classList.add('hidden');
   scheduleDailySummary();
+  resumeTgPollingIfNeeded();
   setInterval(()=>{const s=loadSettings();const a=generateHealthAlerts(getLogs(),s);if(a.length)pushMsg(buildMsg({catName:'',cat:'none',activity:'none',duration:0,confidence:0,notes:'',timestamp:new Date().toISOString()},a).replace(/^.*?\n/,'⏰ Health Check\n'),s);},6*3600000);
 }
 init();
